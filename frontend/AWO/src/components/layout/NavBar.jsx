@@ -2,9 +2,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Bell, Settings, LogOut, User } from "lucide-react";
+import { Bell, Settings, LogOut, User, Menu } from "lucide-react";
 
-export default function Navbar() {
+export default function Navbar({ onToggleSidebar }) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -15,10 +15,18 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-white border-b border-gray-200 px-6 py-3 shadow-sm">
+    <nav className="bg-white border-b border-gray-200 px-6 py-3 shadow-sm fixed top-0 left-0 right-0 z-50">
       <div className="flex items-center justify-between">
         {/* Left - Logo & Title */}
         <div className="flex items-center gap-4">
+          {/* Toggle Sidebar Button */}
+          <button 
+            onClick={onToggleSidebar}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <Menu className="w-5 h-5 text-gray-600" />
+          </button>
+          
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
               <svg
@@ -33,43 +41,17 @@ export default function Navbar() {
                 <rect x="14" y="14" width="7" height="7" fill="white" rx="1" />
               </svg>
             </div>
-            <h1 className="text-black font-semibold text-lg">Bảng tác vụ Kanban</h1>
+            <h1 className="text-black font-semibold text-lg">AWO - AI Workflow Orchestrator</h1>
           </div>
         </div>
 
-        {/* Center - Navigation */}
-        <div className="flex items-center gap-6">
-          <button 
-            onClick={() => navigate('/')}
-            className="text-gray-600 hover:text-black transition-colors text-sm font-medium"
-          >
-            Tổng quan
-          </button>
-          <button 
-            onClick={() => navigate('/')}
-            className={`${window.location.pathname === '/' ? 'text-black border-b-2 border-blue-600' : 'text-gray-600 hover:text-black'} pb-1 text-sm font-medium transition-colors`}
-          >
-            Bảng
-          </button>
-          <button 
-            onClick={() => navigate('/users')}
-            className={`${window.location.pathname === '/users' ? 'text-black border-b-2 border-blue-600' : 'text-gray-600 hover:text-black'} pb-1 text-sm font-medium transition-colors`}
-          >
-            Người dùng
-          </button>
-          <button className="text-gray-600 hover:text-black transition-colors text-sm font-medium">
-            Báo cáo
-          </button>
-        </div>
-
-        {/* Right - Search & Actions */}
-        <div className="flex items-center gap-4">
-          {/* Search */}
+        {/* Center - Quick Search */}
+        <div className="flex-1 max-w-xl mx-8">
           <div className="relative">
             <input
               type="text"
-              placeholder="Tìm kiếm tác vụ..."
-              className="bg-[#F4F4F4] text-black placeholder:text-gray-500 rounded-lg px-4 py-2 pr-10 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-600 border border-gray-200"
+              placeholder="Tìm kiếm tickets, tasks, users..."
+              className="bg-[#F4F4F4] text-black placeholder:text-gray-500 rounded-lg px-4 py-2 pr-10 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-600 border border-gray-200"
             />
             <svg
               className="w-4 h-4 text-gray-500 absolute right-3 top-1/2 -translate-y-1/2"
@@ -85,30 +67,41 @@ export default function Navbar() {
               />
             </svg>
           </div>
+        </div>
 
+        {/* Right - Actions */}
+        <div className="flex items-center gap-3">
           {/* Create Button */}
-          <Button className="bg-black hover:bg-gray-900 text-white text-sm h-9 shadow-md">
-            Tạo Tác Vụ Mới
+          <Button 
+            onClick={() => navigate('/tickets/new')}
+            className="bg-black hover:bg-gray-900 text-white text-sm h-9 shadow-md"
+          >
+            Tạo Ticket
           </Button>
 
           {/* Notifications */}
-          <button className="text-gray-600 hover:text-black transition-colors relative">
+          <button className="text-gray-600 hover:text-black transition-colors relative p-2 hover:bg-gray-100 rounded-lg">
             <Bell className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
           </button>
 
-          {/* Settings */}
-          <button className="text-gray-600 hover:text-black transition-colors">
-            <Settings className="w-5 h-5" />
-          </button>
+          {/* Settings - Only for admin/manager */}
+          {(user?.role === 'admin' || user?.role === 'manager') && (
+            <button 
+              onClick={() => navigate('/settings')}
+              className="text-gray-600 hover:text-black transition-colors p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+          )}
 
           {/* Profile Menu */}
           <div className="relative">
             <button
               onClick={() => setShowProfileMenu(!showProfileMenu)}
-              className="flex items-center gap-2 hover:bg-[#F4F4F4] px-3 py-2 rounded-lg transition-colors"
+              className="flex items-center gap-2 hover:bg-gray-100 px-2 py-1.5 rounded-lg transition-colors"
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium text-sm">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
                 {user?.name?.charAt(0).toUpperCase() || 'U'}
               </div>
             </button>
