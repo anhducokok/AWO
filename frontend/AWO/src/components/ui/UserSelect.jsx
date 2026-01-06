@@ -210,17 +210,17 @@ const UserSelect = ({
                       {showWorkload && workload && (
                         <div className="mt-1.5 flex items-center gap-2 flex-wrap">
                           <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                            getWorkloadColor(workload.summary.workloadLevel)
+                            getWorkloadColor(workload.workload_status || workload.summary?.workloadLevel || 'low')
                           }`}>
-                            {getWorkloadIcon(workload.summary.workloadLevel)}
-                            {workload.summary.workloadLevel}
+                            {getWorkloadIcon(workload.workload_status || workload.summary?.workloadLevel || 'low')}
+                            {workload.workload_status || workload.summary?.workloadLevel || 'low'}
                           </div>
                           <div className="text-xs text-gray-600">
-                            {workload.summary.totalTickets} tickets, {workload.summary.totalTasks} tasks
+                            {workload.total_tickets || workload.summary?.totalTickets || 0} tickets, {workload.total_tasks || workload.summary?.totalTasks || 0} tasks
                           </div>
-                          {workload.sla.criticalItems > 0 && (
+                          {(workload.high_priority_count || workload.sla?.criticalItems || 0) > 0 && (
                             <div className="text-xs text-red-600 font-medium">
-                              {workload.sla.criticalItems} critical
+                              {workload.high_priority_count || workload.sla?.criticalItems || 0} critical
                             </div>
                           )}
                         </div>

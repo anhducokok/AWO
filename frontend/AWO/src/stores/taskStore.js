@@ -1,10 +1,24 @@
 import {createStore} from "@/stores/createStore"
 import taskService from "@/services/task.service"
+
 export const useTaskStore = createStore("taskStore", (set, get) =>({
     tasks: [],
     task: null,
     loading: false,
     pagination: null,
+    filters: {
+        status: '',
+        priority: '',
+        assignee: '',
+        parent_ticket: '',
+    },
+    stats: {
+        total: 0,
+        pending: 0,
+        in_progress: 0,
+        completed: 0,
+        cancelled: 0,
+    },
 
     // Fetch
     fetchTasks: async(filters = {}) =>{
@@ -12,9 +26,13 @@ export const useTaskStore = createStore("taskStore", (set, get) =>({
         try {
             const res = await taskService.getTasks(filters);
             set({
-                tasks: res.data.data,
+                tasks: res.data.data || [],
                 pagination: res.data.pagination,
+                stats: res.data.stats || get().stats,
             })
+        } catch (error) {
+            console.error('Error fetching tasks:', error);
+            set({ tasks: [] });
         } finally {
             set({loading: false});
         }
@@ -56,5 +74,35 @@ export const useTaskStore = createStore("taskStore", (set, get) =>({
     },
     // ===================== Utils =============
     clearTask: () => set({task: null}),
+    
+    // Filter methods
+    updateFilter: (key, value) => {
+        set({
+            filters: {
+                ...get().filters,
+                [key]: value
+            }
+        });
+    },
+    
+    clearFilters: () => {
+        set({
+            filters: {
+                status: '',
+                priority: '',
+                assignee: '',
+                parent_ticket: '',
+            }
+        });
+    },
+    
+    applyFilters: async () => {
+        const currentFilters = get().filters;
+        await get().fetchTasks(currentFilters);
+    },
+    
+    setFilters: (newFilters) => {
+        set({ filters: { ...get().filters, ...newFilters } });
+    },
     // dọn dẹp state chi tiết khi không còn dùng nữa để tránh dữ liệu cũ gây bug UI.
 }))

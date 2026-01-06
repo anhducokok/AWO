@@ -204,10 +204,11 @@ export default function UserManagementPage() {
                   ) : (
                     users.map((user) => {
                       const workload = workloads[user._id];
-                      const workloadLevel = workload?.summary?.workloadLevel || 'low';
-                      const totalTickets = workload?.summary?.totalTickets || 0;
-                      const totalTasks = workload?.summary?.totalTasks || 0;
-                      const criticalItems = workload?.sla?.criticalItems || 0;
+                      const workloadLevel = workload?.workload_status || workload?.summary?.workloadLevel || 'low';
+                      const totalTickets = workload?.total_tickets || workload?.summary?.totalTickets || 0;
+                      const totalTasks = workload?.total_tasks || workload?.summary?.totalTasks || 0;
+                      const criticalItems = workload?.high_priority_count || workload?.sla?.criticalItems || 0;
+                      const workloadScore = workload?.utilization_percentage || workload?.summary?.workloadScore || 0;
                       
                       return (
                         <tr 
@@ -241,7 +242,7 @@ export default function UserManagementPage() {
                               </Badge>
                               {workload && (
                                 <span className="text-xs text-gray-500">
-                                  ({workload.summary.workloadScore}/100)
+                                  ({Math.round(workloadScore)}/100)
                                 </span>
                               )}
                             </div>
