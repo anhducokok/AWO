@@ -1,9 +1,10 @@
 import { GoogleGenAI } from "@google/genai";
 import { buildPrompt } from "../triage/promptBuilder.js";
 import { raw } from "express";
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
+  useGoogleAuth: false // Disable Google Cloud auth, use API key instead
 });
 
 class AI_TriangleService {
@@ -20,13 +21,14 @@ class AI_TriangleService {
       //Build Prompt
       const prompts = buildPrompt(rawText, context);
 
+
       //Gemini API Call
-      const result = await model.generateContent({
-        model: "gemini-2.0-flash-lite",
+      const result = await ai.models.generateContent({
+          model: "gemini-2.5-flash",
         contents: prompts,
-        generationConfig: {
-          maxOutputTokens: 400,
-        },
+        // generationConfig: {
+        //   maxOutputTokens: 400,
+        // },
       });
       const text = await result.response.text();
 
@@ -252,13 +254,13 @@ class AI_TriangleService {
       description: rawText || "No description",
       summary: rawText.substring(0, 200) || "No summary",
       priority: "medium",
-      category: "uncategorized",
+      category: "other",
       labels: [],
       estimatedEffort: 0,
       complexity: "moderate",
       suggestedAssigneeRole: "member",
       assignmentReason: "Auto-generated due to AI failure",
-      confidence: 0.1,
+      confidenceScore: 0.1,
       isFallback: true,
     };
   }

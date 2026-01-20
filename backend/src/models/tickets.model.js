@@ -108,12 +108,6 @@ const ticketSchema = new mongoose.Schema({
   timestamps: true // Tự động tạo createdAt và updatedAt
 });
 
-// Auto update updatedAt
-ticketSchema.pre('save', function(next) {
-  this.updatedAt = new Date();
-  next();
-});
-
 // Index for common queries
 ticketSchema.index({ status: 1, priority: -1, createdAt: -1 });
 ticketSchema.index({ assignedTo: 1, status: 1 });
