@@ -7,6 +7,8 @@ import connectDB from './src/config/db.js';
 import userRoutes from './src/routes/User.routes.js';
 import taskRoutes from './src/routes/task.routes.js';
 import ticketRoutes from './src/routes/ticket.routes.js';
+import ingestRoutes from './src/routes/ingest.route.js';
+import managerRoutes from './src/routes/manager.routes.js';
 import { connectRedis, disconnectRedis } from './src/config/redis.js';
 import { initSocket } from './src/config/socket.js';
 
@@ -35,6 +37,8 @@ app.use('/api/auth', userRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/tickets', ticketRoutes);
+app.use('/api/ingest', ingestRoutes);
+app.use('/api/v1/manager', managerRoutes);
 
 // Connect DB, Redis và start server
 const PORT = process.env.PORT || 3002;
