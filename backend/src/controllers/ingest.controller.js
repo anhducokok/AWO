@@ -1,5 +1,13 @@
 import { validateIngestInput, validateEmailPayload, validateWebhookPayload } from "../validators/ingest.validator.js";
-import { processEmailIngest, processWebhookIngest, processManualIngest } from "../service/ingest.service.js";
+import {
+  processEmailIngest,
+  processWebhookIngest,
+  processManualIngest,
+  approveIngest,
+  rejectIngest,
+  listIngests,
+  getIngestById,
+} from "../service/ingest.service.js";
 
 /**
  * Main ingest endpoint - POST /api/v1/ingest
@@ -57,26 +65,29 @@ export async function ingestController(req, res) {
         });
     }
 
-    // Reload result để lấy ticketId sau khi AI xử lý xong
-    const updatedResult = await result.populate('ticketId');
+    // Reload result to get populated aiAnalysis
+    const populated = await result.populate('reviewedBy', 'name email');
 
     return res.status(201).json({
       success: true,
-      message: "Ingest processed successfully and ticket created",
+      message: "Ingest received and AI analysis complete. Awaiting manager review.",
       data: {
-        ingestId: result._id,
-        source: result.source,
-        status: result.status,
-        receivedAt: result.receivedAt,
-        processedAt: result.processedAt,
-        ticket: updatedResult.ticketId ? {
-          id: updatedResult.ticketId._id,
-          number: updatedResult.ticketId.number,
-          title: updatedResult.ticketId.title,
-          priority: updatedResult.ticketId.priority,
-          category: updatedResult.ticketId.category,
-          aiSuggestion: updatedResult.ticketId.aiAnalysis?.suggestedAssignee
-        } : null
+        ingestId: populated._id,
+        source: populated.source,
+        status: populated.status,
+        receivedAt: populated.receivedAt,
+        processedAt: populated.processedAt,
+        aiAnalysis: populated.aiAnalysis
+          ? {
+              title: populated.aiAnalysis.title,
+              description: populated.aiAnalysis.description,
+              priority: populated.aiAnalysis.priority,
+              category: populated.aiAnalysis.category,
+              confidenceScore: populated.aiAnalysis.confidenceScore,
+              isFallback: populated.aiAnalysis.isFallback,
+              suggestedAssignee: populated.aiAnalysis.suggestedAssignee,
+            }
+          : null,
       }
     });
   } catch (err) {
@@ -86,6 +97,105 @@ export async function ingestController(req, res) {
       error: "Internal server error",
       message: process.env.NODE_ENV === 'development' ? err.message : 'An error occurred processing your request'
     });
+  }
+}
+
+/**
+ * GET /api/v1/ingest
+ * List ingest payloads (manager only)
+ */
+export async function listIngestsController(req, res) {
+  try {
+    const { status, source, page = 1, limit = 20 } = req.query;
+    const result = await listIngests({ status, source, page: +page, limit: +limit });
+    return res.json({ success: true, ...result });
+  } catch (err) {
+    console.error("❌ Error listing ingests:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+/**
+ * GET /api/v1/ingest/:id
+ * Get a single ingest payload
+ */
+export async function getIngestByIdController(req, res) {
+  try {
+    const ingest = await getIngestById(req.params.id);
+    if (!ingest) {
+      return res.status(404).json({ success: false, message: 'Ingest not found' });
+    }
+    return res.json({ success: true, data: ingest });
+  } catch (err) {
+    console.error("❌ Error fetching ingest:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+/**
+ * POST /api/v1/ingest/:id/approve
+ * Manager approves an ingest → creates the ticket
+ * Body (all optional overrides): { title, description, priority, category, assignedTo, ... }
+ */
+export async function approveIngestController(req, res) {
+  try {
+    const { id } = req.params;
+    const reviewerId = req.user._id;
+    const overrides = req.body; // manager can override any AI-suggested field
+
+    const { ingestPayload, ticket } = await approveIngest(id, reviewerId, overrides);
+
+    return res.status(201).json({
+      success: true,
+      message: `Ingest approved. Ticket ${ticket.number} created.`,
+      data: {
+        ingestId: ingestPayload._id,
+        status: ingestPayload.status,
+        reviewedAt: ingestPayload.reviewedAt,
+        ticket: {
+          id: ticket._id,
+          number: ticket.number,
+          title: ticket.title,
+          priority: ticket.priority,
+          category: ticket.category,
+          assignedTo: ticket.assignedTo,
+        },
+      },
+    });
+  } catch (err) {
+    console.error("❌ Error approving ingest:", err);
+    const status = err.message.includes('not pending review') ? 409 : 500;
+    return res.status(status).json({ success: false, message: err.message });
+  }
+}
+
+/**
+ * POST /api/v1/ingest/:id/reject
+ * Manager rejects an ingest
+ * Body: { reason }
+ */
+export async function rejectIngestController(req, res) {
+  try {
+    const { id } = req.params;
+    const reviewerId = req.user._id;
+    const { reason = '' } = req.body;
+
+    const ingestPayload = await rejectIngest(id, reviewerId, reason);
+
+    return res.json({
+      success: true,
+      message: 'Ingest rejected.',
+      data: {
+        ingestId: ingestPayload._id,
+        status: ingestPayload.status,
+        rejectionReason: ingestPayload.rejectionReason,
+        reviewedAt: ingestPayload.reviewedAt,
+      },
+    });
+  } catch (err) {
+    console.error("❌ Error rejecting ingest:", err);
+    const status = err.message.includes('not pending review') ? 409 : 500;
+    return res.status(status).json({ success: false, message: err.message });
   }
 }
 

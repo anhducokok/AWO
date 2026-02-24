@@ -17,7 +17,7 @@ import {
 const Sidebar = ({ isOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   // Define navigation items based on roles
   const getNavigationItems = () => {
@@ -102,9 +102,12 @@ const Sidebar = ({ isOpen }) => {
     return [...commonItems, ...managerItems, ...memberItems, ...adminItems];
   };
 
-  const navigationItems = getNavigationItems().filter(item => 
-    item.roles.includes(user?.role)
-  );
+  const navigationItems = getNavigationItems().filter((item) => {
+    if (loading || !user?.role) {
+      return ['/', '/tickets', '/tasks'].includes(item.path);
+    }
+    return item.roles.includes(user.role);
+  });
 
   const isActive = (path) => {
     if (path === '/') {

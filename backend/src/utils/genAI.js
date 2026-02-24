@@ -1,14 +1,20 @@
 import { GoogleGenAI } from "@google/genai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-const model = genAI.getGenerativeModel({
-  model: "gemini-2.0-flash"
-});
+// Lazy initialization so dotenv.config() runs before the API key is read
+let _ai = null;
+function getAIClient() {
+  if (!_ai) {
+    _ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  }
+  return _ai;
+}
 
 export async function triageWithGemini(rawText) {
-  const result = await model.generateContent(buildPrompt(rawText));
-  const text = result.response.text();
+  const result = await getAIClient().models.generateContent({
+    model: "gemini-2.0-flash",
+    contents: buildPrompt(rawText),
+  });
+  const text = result.text;
 
   return JSON.parse(text);
 }

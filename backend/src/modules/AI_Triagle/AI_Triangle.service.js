@@ -1,11 +1,16 @@
 import { GoogleGenAI } from "@google/genai";
 import { buildPrompt } from "../triage/promptBuilder.js";
-import { raw } from "express";
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  useGoogleAuth: false // Disable Google Cloud auth, use API key instead
-});
+// Lazy initialization: defer client creation until first use so that
+// dotenv.config() in server.js has already populated process.env before
+// the API key is read.
+let _ai = null;
+function getAIClient() {
+  if (!_ai) {
+    _ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  }
+  return _ai;
+}
 
 class AI_TriangleService {
   /**
@@ -23,14 +28,14 @@ class AI_TriangleService {
 
 
       //Gemini API Call
-      const result = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
+      const result = await getAIClient().models.generateContent({
+        model: "gemini-2.5-flash",
         contents: prompts,
         // generationConfig: {
         //   maxOutputTokens: 400,
         // },
       });
-      const text = await result.response.text();
+      const text = result.text;
 
       //Parse JSON
       const jsonText = text
@@ -99,8 +104,8 @@ class AI_TriangleService {
 
   async suggestAssigneee(triangleResult, users) {
     try {
-      // Filter chỉ users active
-      const activeUsers = users.filter((u) => u.is_active);
+      // Filter chỉ users active và available
+      const activeUsers = users.filter((u) => u.isActive && !u.isDeleted);
 
       if (activeUsers.length === 0) {
         return {
@@ -143,7 +148,7 @@ class AI_TriangleService {
         // currentTasks >= 8: 0 điểm
 
         // 4. Availability (10 điểm)
-        if (user.is_available !== false) {
+        if (user.isAvailable !== false) {
           score += 10;
         }
 
@@ -203,7 +208,8 @@ class AI_TriangleService {
     const matches = requiredSkills.filter((reqSkill) =>
       userSkills.some((userSkill) => {
         const req = reqSkill.toLowerCase();
-        const usr = userSkill.toLowerCase();
+        // userSkill may be a { name, level } object or a plain string
+        const usr = (userSkill?.name ?? userSkill).toString().toLowerCase();
         return usr.includes(req) || req.includes(usr);
       }),
     );

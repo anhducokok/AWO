@@ -16,7 +16,7 @@ router.post('/refresh-token', refreshTokenController);
 router.post('/logout', logoutController);
 
 // User management routes (protected)
-router.get('/', authenticate, getAllUsersController);
+router.get('/', getAllUsersController);
 router.get('/:id', authenticate, getUserByIdController);
 
 // Workload routes (protected)

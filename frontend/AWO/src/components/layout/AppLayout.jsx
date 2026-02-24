@@ -9,7 +9,7 @@ const AppLayout = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navbar - Fixed at top */}
-      <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+      <Navbar onToggleSidebar={() => setSidebarOpen((prev) => !prev)} />
       
       <div className="flex pt-16">
         {/* Sidebar */}

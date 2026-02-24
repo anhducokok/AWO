@@ -11,11 +11,15 @@ const ticketSchema = new mongoose.Schema({
   title: {
     type: String,
     required: true,
-    maxlength: 200
+    maxlength: 500
   },
   description: {
     type: String,
     required: true
+  },
+  summary: {
+    type: String,
+    maxlength: 500
   },
   priority: {
     type: String,
@@ -35,14 +39,21 @@ const ticketSchema = new mongoose.Schema({
     default: 'other',
     index: true
   },
-  tags: [String],
-  estimatedResolutionTime: {
+  labels: [String], // Changed from tags to labels
+  estimatedEffort: {
     type: Number, // hours
     default: 0
+  },
+  complexity: {
+    type: String,
+    enum: ['trivial', 'simple', 'moderate', 'complex', 'very_complex']
   },
   assignedTo: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
+  },
+  assignedAt: {
+    type: Date
   },
   
   // AI Analysis metadata
@@ -51,7 +62,7 @@ const ticketSchema = new mongoose.Schema({
       type: Boolean,
       default: false
     },
-    confidence: {
+    confidenceScore: {
       type: Number,
       min: 0,
       max: 1
@@ -68,13 +79,16 @@ const ticketSchema = new mongoose.Schema({
       userId: mongoose.Schema.Types.ObjectId,
       userName: String,
       userEmail: String,
-      score: Number
+      score: Number,
+      reasoning: String
     }],
     rawResponse: mongoose.Schema.Types.Mixed,
     isFallback: {
       type: Boolean,
       default: false
-    }
+    },
+    processingTimeMs: Number,
+    errorMessage: String
   },
 
   // Source tracking
@@ -120,9 +134,9 @@ ticketSchema.virtual('age').get(function() {
 
 // Method to check if ticket is overdue
 ticketSchema.methods.isOverdue = function() {
-  if (!this.estimatedResolutionTime) return false;
+  if (!this.estimatedEffort) return false;
   const deadline = new Date(this.createdAt);
-  deadline.setHours(deadline.getHours() + this.estimatedResolutionTime);
+  deadline.setHours(deadline.getHours() + this.estimatedEffort);
   return Date.now() > deadline && this.status !== 'done' && this.status !== 'closed';
 };
 
