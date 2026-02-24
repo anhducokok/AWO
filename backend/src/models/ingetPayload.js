@@ -1,96 +1,96 @@
 import mongoose from 'mongoose';
 
-const IngestPayloadSchema = new mongoose.Schema({
+const ingestPayloadSchema = new mongoose.Schema({
   source: {
     type: String,
-    enum: ["email", "webhook", "manual"],
+    enum: ['email', 'webhook', 'manual'],
     required: true,
     index: true
   },
-  
-  // Complete raw data from source
   rawData: {
     type: mongoose.Schema.Types.Mixed,
     required: true
   },
-  
-  // Extracted/formatted text for AI processing
   rawText: {
     type: String,
     required: true
   },
-  
-  // Source-specific metadata
   sourceMeta: {
-    // Email metadata
-    emailFrom: { type: String },
-    emailTo: { type: String },
-    subject: { type: String },
-    receivedDate: { type: Date },
-    
-    // Webhook metadata
-    webhookType: { type: String }, // slack, form, etc.
-    channelId: { type: String },
-    userId: { type: String },
-    
-    // Manual entry metadata
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    userAgent: { type: String }
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
   },
-  
-  // File attachments
   attachments: [{
-    filename: { type: String },
-    url: { type: String },
-    mimeType: { type: String },
-    size: { type: Number }
+    filename: String,
+    url: String,
+    size: Number,
+    mimeType: String
   }],
-  
-  // Processing status
   status: {
     type: String,
-    enum: ["pending", "processing", "completed", "failed"],
-    default: "pending",
+    // pending        → just saved, AI not yet run
+    // processing     → AI triage in progress
+    // pending_review → AI done, waiting for manager approval
+    // approved       → manager approved, ticket created
+    // rejected       → manager rejected
+    // failed         → AI triage crashed
+    enum: ['pending', 'processing', 'pending_review', 'approved', 'rejected', 'failed'],
+    default: 'pending',
     index: true
   },
-  
-  // Error tracking
-  errorMessage: {
-    type: String
-  },
-  
-  // Timestamps
+  errorMessage: String,
   receivedAt: {
     type: Date,
     default: Date.now,
     index: true
   },
-  
-  processedAt: {
-    type: Date
+  processedAt: Date,
+
+  // AI analysis result — stored here until manager approves
+  aiAnalysis: {
+    title: String,
+    description: String,
+    summary: String,
+    priority: String,
+    category: String,
+    labels: [String],
+    estimatedEffort: Number,
+    complexity: String,
+    confidenceScore: Number,
+    modelVersion: String,
+    suggestedAssignee: {
+      userId: mongoose.Schema.Types.ObjectId,
+      userName: String,
+      userEmail: String,
+      score: Number,
+      reasoning: String
+    },
+    alternatives: [{
+      userId: mongoose.Schema.Types.ObjectId,
+      userName: String,
+      userEmail: String,
+      score: Number,
+      reasoning: String
+    }],
+    isFallback: { type: Boolean, default: false },
+    rawResponse: mongoose.Schema.Types.Mixed
   },
-  
-  // Link to created ticket (after AI triage)
+
+  // Review metadata
+  reviewedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  reviewedAt: Date,
+  rejectionReason: String,
+
+  // Link to created ticket (set after approval)
   ticketId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Ticket'
   }
-}, {
-  timestamps: true // Adds createdAt and updatedAt
-});
+}, { timestamps: true });
 
-// Indexes for common queries
-IngestPayloadSchema.index({ status: 1, receivedAt: -1 });
-IngestPayloadSchema.index({ source: 1, status: 1 });
+// Index for common queries
+ingestPayloadSchema.index({ status: 1, receivedAt: -1 });
 
-// Virtual for formatted display
-IngestPayloadSchema.virtual('displayText').get(function() {
-  if (this.source === 'email' && this.sourceMeta?.subject) {
-    return `${this.sourceMeta.subject} - ${this.rawText.substring(0, 100)}...`;
-  }
-  return this.rawText.substring(0, 150) + '...';
-});
-
-const IngestPayload = mongoose.model('IngestPayload', IngestPayloadSchema);
-
-export default IngestPayload;
+export default mongoose.model('IngestPayload', ingestPayloadSchema);

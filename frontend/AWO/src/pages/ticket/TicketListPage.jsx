@@ -69,6 +69,7 @@ const TicketListPage = () => {
 
   const getPriorityColor = (priority) => {
     const colors = {
+      urgent: 'destructive',
       critical: 'destructive',
       high: 'warning',
       medium: 'default',
@@ -130,7 +131,7 @@ const TicketListPage = () => {
           <Card className="p-4">
             <div className="text-sm text-muted-foreground">Avg Resolution</div>
             <div className="text-2xl font-bold">
-              {Math.round(stats.averageResolutionTime)}h
+              {stats.averageResolutionTime ? `${Math.round(stats.averageResolutionTime)}h` : '—'}
             </div>
           </Card>
           <Card className="p-4">
@@ -181,7 +182,7 @@ const TicketListPage = () => {
                         </Badge>
                       </div>
                       <h3 className="font-semibold text-lg mb-1">
-                        {ticket.subject}
+                        {ticket.title || ticket.subject}
                       </h3>
                       {ticket.description && (
                         <p className="text-sm text-muted-foreground line-clamp-2">

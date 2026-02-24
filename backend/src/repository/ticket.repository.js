@@ -304,7 +304,9 @@ class TicketRepository {
                   {
                     $and: [
                       { $lt: ['$dueDate', now] },
-                      { $nin: ['$status', ['resolved', 'closed']] },
+                      // $nin as aggregation expression requires MongoDB 5.0+;
+                      // use $not + $in for compatibility with all versions.
+                      { $not: [{ $in: ['$status', ['resolved', 'closed']] }] },
                     ],
                   },
                   1,

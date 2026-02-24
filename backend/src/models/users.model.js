@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
-    email: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
     role: {
       type: String,
       enum: ["admin", "member", "manager"],
@@ -17,7 +17,11 @@ const userSchema = new mongoose.Schema(
       },
     ],
     capacityHoursPerWeek: { type: Number, default: 40 },
-    currentEstimatedHours: { type: Number },
+    currentWorkload: { type: Number, default: 0 }, // Number of active tasks
+    
+    // Availability
+    isAvailable: { type: Boolean, default: true },
+    avatarUrl: String,
 
     // authentication fields
     password: { type: String, required: true, minlength: 8 },
@@ -26,6 +30,7 @@ const userSchema = new mongoose.Schema(
 
     // refresh token
     refreshToken: String,
+    
     // status fields
     isActive: {
       type: Boolean,
@@ -47,6 +52,11 @@ const userSchema = new mongoose.Schema(
 //   }
 
 // });
+
+// Indexes for query optimization
+userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ isActive: 1, isAvailable: 1 });
+userSchema.index({ role: 1 });
 
 // ✅ Sửa: method → methods
 userSchema.methods.comparePassword = async function (inputPassword) {
