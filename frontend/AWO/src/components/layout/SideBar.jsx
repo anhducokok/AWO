@@ -11,7 +11,8 @@ import {
   Workflow,
   FolderKanban,
   UserCog,
-  Clock
+  Clock,
+  Inbox
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen }) => {
@@ -47,6 +48,12 @@ const Sidebar = ({ isOpen }) => {
         title: 'Manager Dashboard',
         icon: FolderKanban,
         path: '/manager/dashboard',
+        roles: ['admin', 'manager']
+      },
+      {
+        title: 'AI Ingest Review',
+        icon: Inbox,
+        path: '/manager/ingest-review',
         roles: ['admin', 'manager']
       },
       {

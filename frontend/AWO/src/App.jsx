@@ -9,6 +9,7 @@ import UserManagementPage from './pages/Home/UserManagementPage';
 import TicketListPage from './pages/ticket/TicketListPage';
 import TaskListPage from './pages/task/TaskListPage';
 import ManagerDashboard from './pages/Manager/ManagerDashboard';
+import IngestReviewPage from './pages/Manager/IngestReviewPage';
 import { Toaster } from 'sonner';
 
 function App() {
@@ -33,6 +34,7 @@ function App() {
             <Route path="/tickets" element={<TicketListPage />} />
             <Route path="/tasks" element={<TaskListPage />} />
             <Route path="/manager/dashboard" element={<ManagerDashboard />} />
+            <Route path="/manager/ingest-review" element={<IngestReviewPage />} />
           </Route>
 
           {/* Fallback */}
