@@ -1,171 +1,211 @@
-import { useState } from "react";
-import Navbar from "@/components/layout/Navbar";
+import { useEffect, useState } from "react";
+import { useTaskStore } from "@/stores/taskStore";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Clock, User, Filter, Tag } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Clock, RefreshCw, AlertCircle } from "lucide-react";
 
-const getPriorityVariant = (priority) => {
-  if (priority.includes("Cao")) return "destructive";
-  if (priority.includes("Vừa")) return "default";
-  return "secondary";
+// ─── helpers ────────────────────────────────────────────────────────────────
+
+const PRIORITY_META = {
+  urgent:   { label: "Khẩn cấp", variant: "destructive",  color: "#ef4444" },
+  high:     { label: "Cao",      variant: "destructive",  color: "#f97316" },
+  medium:   { label: "Vừa",      variant: "default",      color: "#f59e0b" },
+  low:      { label: "Thấp",     variant: "secondary",    color: "#10b981" },
 };
 
-const TaskCard = ({ task }) => (
-  <Card className="hover:shadow-lg transition-all cursor-pointer group border-l-4" style={{ borderLeftColor: task.priority.includes("Cao") ? "#ef4444" : task.priority.includes("Vừa") ? "#f59e0b" : "#10b981" }}>
-    <CardHeader className="pb-3">
-      <div className="flex items-center justify-between mb-2">
-        <Badge variant={getPriorityVariant(task.priority)} className="text-xs">
-          {task.priority}
-        </Badge>
-        <Avatar className="h-8 w-8 border-2 border-white shadow-sm">
-          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs font-medium">
-            {task.assignee}
-          </AvatarFallback>
-        </Avatar>
-      </div>
-      <CardTitle className="text-base font-semibold group-hover:text-blue-600 transition-colors">{task.title}</CardTitle>
-      <CardDescription className="text-sm text-gray-600 leading-relaxed">{task.description}</CardDescription>
-    </CardHeader>
-    
-    {task.chart && (
-      <CardContent className="pb-3">
-        <div className="w-full h-24 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg flex items-end justify-around p-3 border border-gray-100">
-          {[40, 55, 65, 75, 85, 70, 90].map((height, i) => (
-            <div
-              key={i}
-              className="w-3 bg-gradient-to-t from-blue-500 to-purple-500 rounded-full hover:opacity-80 transition-opacity"
-              style={{ height: `${height}%` }}
-            />
-          ))}
+const STATUS_COLUMNS = [
+  { key: "todo",        label: "Cần làm",          badgeVariant: "secondary", accent: "#6b7280" },
+  { key: "in_progress", label: "Đang tiến hành",   badgeVariant: "default",   accent: "#3b82f6" },
+  { key: "review",      label: "Đang duyệt",       badgeVariant: "outline",   accent: "#8b5cf6" },
+  { key: "done",        label: "Hoàn thành",       badgeVariant: "secondary", accent: "#10b981" },
+];
+
+const getInitials = (name = "") =>
+  name.split(" ").slice(-2).map(w => w[0]).join("").toUpperCase() || "?";
+
+const isOverdue = (deadline) =>
+  deadline && new Date(deadline) < new Date();
+
+// ─── TaskCard ────────────────────────────────────────────────────────────────
+
+const TaskCard = ({ task }) => {
+  const pm = PRIORITY_META[task.priority] ?? PRIORITY_META.medium;
+  const overdue = task.status !== "done" && isOverdue(task.deadline);
+  const assigneeName = task.assignedTo?.name ?? task.assignedTo?.email ?? null;
+
+  return (
+    <Card
+      className="hover:shadow-lg transition-all cursor-pointer group border-l-4"
+      style={{ borderLeftColor: pm.color }}
+    >
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between mb-1">
+          <Badge variant={pm.variant} className="text-xs">
+            {pm.label}
+          </Badge>
+          {assigneeName && (
+            <Avatar className="h-7 w-7 border-2 border-white shadow-sm">
+              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-[10px] font-semibold">
+                {getInitials(assigneeName)}
+              </AvatarFallback>
+            </Avatar>
+          )}
         </div>
+        <CardTitle className="text-sm font-semibold leading-snug group-hover:text-blue-600 transition-colors">
+          {task.title}
+        </CardTitle>
+        {task.description && (
+          <CardDescription className="text-xs text-gray-500 line-clamp-2 mt-0.5">
+            {task.description}
+          </CardDescription>
+        )}
+      </CardHeader>
+
+      <CardContent className="pt-0 flex items-center justify-between">
+        <div className={`flex items-center gap-1 text-xs ${overdue ? "text-red-500 font-medium" : "text-gray-400"}`}>
+          {overdue ? <AlertCircle className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
+          <span>
+            {task.deadline
+              ? new Date(task.deadline).toLocaleDateString("vi-VN")
+              : "Không có deadline"}
+          </span>
+        </div>
+        {task.tags?.length > 0 && (
+          <div className="flex gap-1">
+            {task.tags.slice(0, 2).map(tag => (
+              <span key={tag} className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
       </CardContent>
-    )}
+    </Card>
+  );
+};
 
-    <CardContent className="pt-0 flex items-center justify-between">
-      <div className="flex items-center gap-2 text-gray-600 text-sm">
-        <Clock className="w-4 h-4" />
-        <span className="font-medium">{task.time}</span>
-      </div>
-      <span className="text-xs text-gray-500">{task.assigneeName}</span>
-    </CardContent>
-  </Card>
-);
+// ─── Column ──────────────────────────────────────────────────────────────────
 
-const Column = ({ title, count, tasks, badgeVariant = "secondary" }) => (
-  <div className="flex-1 min-w-[300px]">
-    <div className="flex items-center gap-3 mb-4 pb-3 border-b-2 border-gray-200">
-      <h2 className="text-black font-bold text-lg">{title}</h2>
-      <Badge variant={badgeVariant} className="text-xs px-2.5 py-1">
-        {count} {count === 1 ? "tác vụ" : "tác vụ"}
+const Column = ({ col, tasks, loading }) => (
+  <div className="flex-1 min-w-[280px] max-w-[320px]">
+    <div
+      className="flex items-center gap-2 mb-4 pb-3 border-b-2"
+      style={{ borderColor: col.accent }}
+    >
+      <h2 className="font-bold text-sm text-gray-700 uppercase tracking-wide">
+        {col.label}
+      </h2>
+      <Badge variant={col.badgeVariant} className="text-xs px-2 py-0.5">
+        {tasks.length}
       </Badge>
     </div>
-    <div className="space-y-4">
-      {tasks.map((task) => (
-        <TaskCard key={task.id} task={task} />
-      ))}
-      <button className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all text-sm font-medium">
-        + Thêm tác vụ mới
-      </button>
+
+    <div className="space-y-3 min-h-[120px]">
+      {loading ? (
+        // skeleton
+        Array.from({ length: 2 }).map((_, i) => (
+          <div key={`sk-${i}`} className="h-24 bg-gray-200 rounded-lg animate-pulse" />
+        ))
+      ) : tasks.length === 0 ? (
+        <div className="h-24 flex items-center justify-center border-2 border-dashed border-gray-200 rounded-lg">
+          <span className="text-xs text-gray-400">Không có tác vụ</span>
+        </div>
+      ) : (
+        tasks.map(task => <TaskCard key={task._id} task={task} />)
+      )}
     </div>
   </div>
 );
 
+// ─── HomePage ────────────────────────────────────────────────────────────────
+
 export default function HomePage() {
-  const [tasks] = useState({
-    canLam: [
-    
-    ],
-    dangTienHanh: [
-    
-    ],
-    dangDuyet: [
-    ],
-    hoanThanh: [
-    ]
-  });
+  const { user } = useAuth();
+  const { tasks, loading, fetchMyTasks, getKanbanColumns, stats } = useTaskStore();
+  const [activeFilter, setActiveFilter] = useState("all");
+
+  useEffect(() => {
+    if (user?._id) {
+      fetchMyTasks(user._id);
+    }
+  }, [user?._id]);
+
+  const handleRefresh = () => {
+    if (user?._id) fetchMyTasks(user._id);
+  };
+
+  const columns = getKanbanColumns();
+
+  // apply quick priority filter
+  const filtered = (colTasks) => {
+    if (activeFilter === "all") return colTasks;
+    return colTasks.filter(t => t.priority === activeFilter);
+  };
 
   return (
-    <div className="min-h-screen bg-[#F4F4F4]">
-      <Navbar />
-      
-      <div className="p-6">
-        {/* Header Controls */}
-        <div className="flex items-center gap-4 mb-8">
-          <Button variant="outline" className="gap-2 shadow-sm hover:shadow-md">
-            <Filter className="w-4 h-4" />
-            Bộ lọc
-          </Button>
-          
-          <Button variant="outline" className="gap-2 shadow-sm hover:shadow-md">
-            <Tag className="w-4 h-4" />
-            Sắp xếp
-          </Button>
-
-          {/* Team Avatars */}
-          <div className="flex items-center ml-auto gap-4">
-            <span className="text-sm text-gray-600 font-medium">Đội nhóm:</span>
-            <div className="flex -space-x-3">
-              {[
-                { name: "AN", full: "Anh Đức" },
-                { name: "MH", full: "Minh Hiếu" },
-                { name: "TL", full: "Thùy Linh" }
-              ].map((member, i) => (
-                <Avatar 
-                  key={i} 
-                  className="border-2 border-white shadow-md hover:scale-110 hover:z-10 transition-transform cursor-pointer"
-                  title={member.full}
-                >
-                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs font-medium">
-                    {member.name}
-                  </AvatarFallback>
-                </Avatar>
-              ))}
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="h-10 w-10 rounded-full text-xs font-medium shadow-md hover:shadow-lg"
-                title="Xem thêm thành viên"
-              >
-                +4
-              </Button>
-            </div>
+    <div className="space-y-6">
+        {/* Board Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-xl font-bold text-gray-800">
+              Tác vụ của tôi
+            </h1>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {user?.name ?? user?.email} · {tasks.length} tác vụ
+            </p>
           </div>
 
-          <Button variant="outline" className="shadow-sm hover:shadow-md">
-            Chế độ xem
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Priority quick-filter */}
+            <div className="flex gap-1 bg-white border rounded-lg p-1 shadow-sm">
+              {[
+                { key: "all",    label: "Tất cả" },
+                { key: "urgent", label: "Khẩn" },
+                { key: "high",   label: "Cao" },
+                { key: "medium", label: "Vừa" },
+                { key: "low",    label: "Thấp" },
+              ].map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => setActiveFilter(f.key)}
+                  className={`px-3 py-1 rounded text-xs font-medium transition-all ${
+                    activeFilter === f.key
+                      ? "bg-blue-600 text-white shadow"
+                      : "text-gray-500 hover:bg-gray-100"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleRefresh}
+              disabled={loading}
+              className="shadow-sm"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            </Button>
+          </div>
         </div>
 
+
         {/* Kanban Board */}
-        <div className="flex gap-6 overflow-x-auto pb-6">
-          <Column
-            title=" Cần làm"
-            count={3}
-            tasks={tasks.canLam}
-            badgeVariant="secondary"
-          />
-          <Column
-            title=" Đang tiến hành"
-            count={2}
-            tasks={tasks.dangTienHanh}
-            badgeVariant="default"
-          />
-          <Column
-            title=" Đang duyệt"
-            count={1}
-            tasks={tasks.dangDuyet}
-            badgeVariant="outline"
-          />
-          <Column
-            title=" Hoàn thành"
-            count={1}
-            tasks={tasks.hoanThanh}
-            badgeVariant="secondary"
-          />
+        <div className="flex gap-5 overflow-x-auto pb-6">
+          {STATUS_COLUMNS.map(col => (
+            <Column
+              key={col.key}
+              col={col}
+              tasks={filtered(columns[col.key] ?? [])}
+              loading={loading}
+            />
+          ))}
         </div>
-      </div>
     </div>
   );
 }

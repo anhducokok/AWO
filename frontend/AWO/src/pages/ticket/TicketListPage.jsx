@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useTicketStore } from '@/stores/ticketStore';
+import { useNotificationStore } from '@/stores/useNotificationStore';
+import { useAuth } from '@/context/AuthContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import TicketFilter from '@/components/ticket/TicketFilter';
 import TicketSearch from '@/components/ticket/TicketSearch';
-import { Plus, RefreshCw } from 'lucide-react';
+import TicketDetailModal from '@/components/ticket/TicketDetailModal';
+import { toast } from 'sonner';
+import { Plus, RefreshCw, CheckCircle2, X } from 'lucide-react';
 
 /**
  * Ticket List Page
@@ -17,21 +21,77 @@ const TicketListPage = () => {
     loading,
     pagination,
     filters,
-    fetchTickets,
+    fetchTicketsByAssignee,
+    fetchTicketsById,
+    handleTicketUpdated,
     setPage,
     stats,
     fetchStats,
   } = useTicketStore();
 
+  const { acceptTicket, dismissTicket, notifications } = useNotificationStore();
+  const { user } = useAuth();
+  const [acceptingId, setAcceptingId] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [modalLoading, setModalLoading] = useState(false);
+
+  // Find matching unread ticket_assigned notification for a given ticket
+  const getNotifForTicket = (ticketId) =>
+    notifications.find(
+      (n) =>
+        !n.read &&
+        n.type === 'ticket_assigned' &&
+        (n.data?.ticketId === ticketId || n.data?._id === ticketId)
+    );
+
+  const handleAccept = async (ticket) => {
+    const notif = getNotifForTicket(ticket._id);
+    setAcceptingId(ticket._id);
+    try {
+      const updated = await acceptTicket(ticket._id, notif?.id);
+      const patched = updated ?? { ...ticket, status: 'in_progress' };
+      handleTicketUpdated(patched);
+      // Reflect in open modal too
+      setSelectedTicket((prev) => prev?._id === ticket._id ? patched : prev);
+      toast.success(`Đã nhận ticket ${ticket.number} — chuyển sang In Progress`);
+    } catch (err) {
+      toast.error('Không thể nhận ticket, thử lại.');
+    } finally {
+      setAcceptingId(null);
+    }
+  };
+
+  const handleDismiss = (ticket) => {
+    const notif = getNotifForTicket(ticket._id);
+    if (notif) dismissTicket(notif.id);
+  };
+
+  // Open modal — fetch full detail (with tasks + populated refs)
+  const handleCardClick = async (ticket) => {
+    setSelectedTicket(ticket); // show immediately with list data
+    setModalLoading(true);
+    try {
+      await fetchTicketsById(ticket._id);  // loads into store.ticket
+      // read from store after fetch
+      const full = useTicketStore.getState().ticket;
+      if (full) setSelectedTicket(full);
+    } catch (e) {
+      // keep showing the list-level data
+    } finally {
+      setModalLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetchTickets();
-    fetchStats();
-  }, []);
+    if (user?._id) {
+      fetchTicketsByAssignee(user._id);
+      fetchStats();
+    }
+  }, [user?._id]);
 
   const handleRefresh = () => {
-    fetchTickets();
+    if (user?._id) fetchTicketsByAssignee(user._id);
     fetchStats();
   };
 
@@ -161,9 +221,12 @@ const TicketListPage = () => {
           ) : (
             <div className="space-y-3">
               {tickets.map((ticket) => (
-                <Card
+              <Card
                   key={ticket._id}
-                  className="p-4 hover:shadow-md transition-shadow cursor-pointer"
+                  className={`p-4 hover:shadow-md transition-shadow cursor-pointer ${
+                    getNotifForTicket(ticket._id) ? 'ring-2 ring-blue-400 ring-offset-1' : ''
+                  }`}
+                  onClick={() => handleCardClick(ticket)}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -180,6 +243,11 @@ const TicketListPage = () => {
                         <Badge variant={getSLABadgeColor(ticket)}>
                           {getSLAStatus(ticket)}
                         </Badge>
+                        {getNotifForTicket(ticket._id) && (
+                          <Badge variant="default" className="bg-blue-500 text-white text-[11px]">
+                            🔔 Mới
+                          </Badge>
+                        )}
                       </div>
                       <h3 className="font-semibold text-lg mb-1">
                         {ticket.title || ticket.subject}
@@ -206,6 +274,30 @@ const TicketListPage = () => {
                         )}
                       </div>
                     </div>
+
+                    {/* Quick Accept / Dismiss on card — stop propagation so card click doesn't also open modal */}
+                    {ticket.status === 'open' && getNotifForTicket(ticket._id) && (
+                      <div className="flex flex-col gap-2 ml-4 shrink-0">
+                        <Button
+                          size="sm"
+                          className="gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+                          disabled={acceptingId === ticket._id}
+                          onClick={(e) => { e.stopPropagation(); handleAccept(ticket); }}
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          {acceptingId === ticket._id ? 'Đang xử lý...' : 'Nhận'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5 text-gray-500"
+                          onClick={(e) => { e.stopPropagation(); handleDismiss(ticket); }}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Bỏ qua
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </Card>
               ))}
@@ -236,6 +328,18 @@ const TicketListPage = () => {
           )}
         </div>
       </div>
+
+      {/* Ticket Detail Modal */}
+      {selectedTicket && (
+        <TicketDetailModal
+          ticket={selectedTicket}
+          isNew={!!getNotifForTicket(selectedTicket._id)}
+          accepting={acceptingId === selectedTicket._id}
+          onClose={() => setSelectedTicket(null)}
+          onAccept={() => handleAccept(selectedTicket)}
+          onDismiss={() => { handleDismiss(selectedTicket); setSelectedTicket(null); }}
+        />
+      )}
     </div>
   );
 };

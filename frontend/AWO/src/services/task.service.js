@@ -4,9 +4,14 @@ class TaskService{
         return axios.post("/tasks", data);
     }
 
-    getTasks(params){
-        return axios.get("/tasks", params);
+    getTasks(params = {}){
+        return axios.get("/tasks", { params });
     }
+
+    getTasksByAssignee(userId, params = {}){
+        return axios.get("/tasks", { params: { assignedTo: userId, ...params } });
+    }
+
     getTaskById(id){
         return axios.get(`/tasks/${id}`);
     }

@@ -2,9 +2,13 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Navbar from './NavBar';
 import Sidebar from './SideBar';
+import useNotificationSocket from '@/hooks/useNotificationSocket';
 
 const AppLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Register socket notification listener for the entire authenticated session
+  useNotificationSocket();
 
   return (
     <div className="min-h-screen bg-gray-50">

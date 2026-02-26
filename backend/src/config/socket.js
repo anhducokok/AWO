@@ -1,5 +1,6 @@
 import { Server } from "socket.io";
 import { redisSubscriber } from "./redis.js";
+import jwt from "jsonwebtoken";
 
 let ioInstance = null;
 let redisListenerRegistered = false;
@@ -77,6 +78,21 @@ export const initSocket = (httpServer) => {
 
   ioInstance.on("connection", (socket) => {
     console.log("🔌 Socket connected:", socket.id);
+
+    // Auto-join user-specific room from JWT token
+    const token = socket.handshake.auth?.token;
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+        if (decoded?.id) {
+          socket.join(`user:${decoded.id}`);
+          socket.userId = decoded.id;
+          console.log(`🔑 Socket ${socket.id} auto-joined user room: user:${decoded.id}`);
+        }
+      } catch (err) {
+        console.warn("⚠️ Socket JWT decode failed:", err.message);
+      }
+    }
 
     // Join default workspace room
     socket.join("workspace");

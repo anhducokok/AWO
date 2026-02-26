@@ -24,7 +24,7 @@ class TicketRepository {
       includeTasks = false,
     } = options;
 
-    const query = { isDeleted: false, ...filters };
+    const query = { isDeleted: { $ne: true }, ...filters };
     const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
 
     let queryBuilder = Ticket.find(query).sort(sort);
@@ -55,7 +55,7 @@ class TicketRepository {
    * Count tickets with filters
    */
   async count(filters = {}) {
-    const query = { isDeleted: false, ...filters };
+    const query = { isDeleted: { $ne: true }, ...filters };
     return Ticket.countDocuments(query);
   }
 
@@ -70,7 +70,7 @@ class TicketRepository {
       includeTasks = true,
     } = options;
 
-    let queryBuilder = Ticket.findOne({ _id: ticketId, isDeleted: false });
+    let queryBuilder = Ticket.findOne({ _id: ticketId, isDeleted: { $ne: true } });
 
     // Only populate if populate field is provided
     if (populate) {
@@ -99,7 +99,7 @@ class TicketRepository {
       includeTasks = true,
     } = options;
 
-    let queryBuilder = Ticket.findOne({ number: ticketNumber, isDeleted: false })
+    let queryBuilder = Ticket.findOne({ number: ticketNumber, isDeleted: { $ne: true } })
       .populate(populate, select);
 
     if (includeTasks) {
@@ -123,7 +123,7 @@ class TicketRepository {
     } = options;
 
     let query = Ticket.findOneAndUpdate(
-      { _id: ticketId, isDeleted: false },
+      { _id: ticketId, isDeleted: { $ne: true } },
       { $set: updates },
       { new: true, runValidators: true }
     );
@@ -141,7 +141,7 @@ class TicketRepository {
    */
   async softDeleteById(ticketId, deletedBy = null) {
     return Ticket.findOneAndUpdate(
-      { _id: ticketId, isDeleted: false },
+      { _id: ticketId, isDeleted: { $ne: true } },
       { 
         $set: { 
           isDeleted: true, 
@@ -192,7 +192,7 @@ class TicketRepository {
    * Get ticket statistics
    */
   async getStats(filters = {}) {
-    const query = { isDeleted: false, ...filters };
+    const query = { isDeleted: { $ne: true }, ...filters };
     
     return Ticket.aggregate([
       { $match: query },
@@ -213,7 +213,7 @@ class TicketRepository {
     const now = new Date();
     
     return Ticket.aggregate([
-      { $match: { isDeleted: false } },
+      { $match: { isDeleted: { $ne: true } } },
       {
         $addFields: {
           slaStatus: {
@@ -279,7 +279,7 @@ class TicketRepository {
    */
   async getStats(filters = {}) {
     const now = new Date();
-    const matchQuery = { isDeleted: false, ...filters };
+    const matchQuery = { isDeleted: { $ne: true }, ...filters };
 
     const [
       totalTickets,

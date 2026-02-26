@@ -7,8 +7,8 @@ const WorkloadHeatmap = ({ data }) => {
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Team Workload</h2>
         <div className="space-y-3">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="animate-pulse">
+          {['a', 'b', 'c', 'd'].map((n) => (
+            <div key={`sk-${n}`} className="animate-pulse">
               <div className="h-16 bg-gray-200 rounded"></div>
             </div>
           ))}

@@ -34,7 +34,7 @@ class TicketService {
         return axiosInstance.get(`/tickets/reporter/${email}`, {params});
     }
     getTicketsByAssignee(userId, params= {}){
-        return axiosInstance.get(`/tickets/assignee/${userId}`, {params});
+        return axiosInstance.get(`/tickets/assigned/${userId}`, {params});
     }
     getOverdueTickets(params = {}){
         return axiosInstance.get(`/tickets/overdue`, {params})

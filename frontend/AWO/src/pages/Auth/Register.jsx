@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,8 +9,9 @@ import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/context/AuthContext"
 
 export default function RegisterForm() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("register");
-  const { register } = useAuth();
+  const { register, login } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -65,20 +66,24 @@ export default function RegisterForm() {
         password: formData.password,
       };
 
-      const { data } = await register(payload);
-      toast.success("Đăng ký thành công!");
-      setFormData({ name: "", email: "", password: "", confirmPassword: "" });
+      const result = await register(payload);
 
-      console.log("Server response:", data);
-    } catch (error) {
-      // Axios error handling
-      if (error.response) {
-        // lỗi từ backend
-        toast.error(error.response.data.message || "Đăng ký thất bại");
-      } else {
-        // lỗi network
-        toast.error("Không thể kết nối server");
+      if (!result.success) {
+        toast.error(result.message || "Đăng ký thất bại");
+        return;
       }
+
+      // Auto-login immediately after successful registration
+      const loginResult = await login(formData.email, formData.password);
+      if (loginResult.success) {
+        toast.success("Đăng ký thành công! Đang chuyển hướng...");
+        navigate('/', { replace: true });
+      } else {
+        toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
+        navigate('/login', { replace: true });
+      }
+    } catch (error) {
+      toast.error("Không thể kết nối server");
       console.error(error);
     } finally {
       setLoading(false);
@@ -119,7 +124,7 @@ export default function RegisterForm() {
             {/* Tabs */}
             <div className="flex gap-8 mb-8 border-b border-gray-200">
               <button
-                onClick={() => window.location.href = '/login'}
+                onClick={() => navigate('/login')}
                 className={`pb-3 text-sm font-medium transition-colors ${
                   activeTab === "login"
                     ? "text-black"
@@ -129,7 +134,7 @@ export default function RegisterForm() {
                 Đăng nhập
               </button>
               <button
-                onClick={() => window.location.href = '/register'}
+                onClick={() => navigate('/register')}
                 className={`pb-3 text-sm font-medium transition-colors relative ${
                   activeTab === "register"
                     ? "text-black"

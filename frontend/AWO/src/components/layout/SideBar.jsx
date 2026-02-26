@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useNotificationStore } from '@/stores/useNotificationStore';
 import {
   LayoutDashboard,
   Ticket,
@@ -19,6 +20,11 @@ const Sidebar = ({ isOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading } = useAuth();
+
+  // Unread ticket assignment notifications → badge count
+  const unreadTicketCount = useNotificationStore((s) =>
+    s.notifications.filter((n) => !n.read && n.type === 'ticket_assigned').length
+  );
 
   // Define navigation items based on roles
   const getNavigationItems = () => {
@@ -166,7 +172,16 @@ const Sidebar = ({ isOpen }) => {
               >
                 <Icon className={`h-5 w-5 ${active ? 'text-blue-600' : 'text-gray-500'}`} />
                 <span>{item.title}</span>
-                {active && (
+                {/* Notification badge for Tickets */}
+                {item.path === '/tickets' && unreadTicketCount > 0 && (
+                  <span className="ml-auto min-w-[20px] h-5 bg-red-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center px-1 shadow">
+                    {unreadTicketCount > 9 ? '9+' : unreadTicketCount}
+                  </span>
+                )}
+                {active && item.path !== '/tickets' && (
+                  <div className="ml-auto w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
+                )}
+                {active && item.path === '/tickets' && unreadTicketCount === 0 && (
                   <div className="ml-auto w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
                 )}
               </button>

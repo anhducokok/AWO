@@ -15,7 +15,7 @@ class AnalyticsRepository {
       const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
       // Get all tickets
-      const allTickets = await Ticket.find({ isDeleted: false }).lean();
+      const allTickets = await Ticket.find({ isDeleted: { $ne: true } }).lean();
       
       // Calculate metrics
       const totalTasks = allTickets.length;
@@ -61,7 +61,7 @@ class AnalyticsRepository {
       // User stats
       const activeUsers = await User.countDocuments({ 
         isActive: true, 
-        isDeleted: false,
+        isDeleted: { $ne: true },
         role: { $in: ['member', 'manager', 'admin'] }
       });
       
@@ -105,7 +105,7 @@ class AnalyticsRepository {
       const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
       // Build filter
-      const query = { isDeleted: false };
+      const query = { isDeleted: { $ne: true } };
       if (filters.status) query.status = filters.status;
       if (filters.priority) query.priority = filters.priority;
       if (filters.assignee) query.assignedTo = filters.assignee;
@@ -204,7 +204,7 @@ class AnalyticsRepository {
     try {
       const ticket = await Ticket.findOne({ 
         _id: ticketId, 
-        isDeleted: false 
+        isDeleted: { $ne: true } 
       })
         .populate('assignedTo', 'name email avatarUrl skills')
         .populate('assignedBy', 'name email')
@@ -252,7 +252,7 @@ class AnalyticsRepository {
       const { startDate, endDate } = dateRange;
       
       // Build date filter
-      const dateFilter = { status: 'done', isDeleted: false };
+      const dateFilter = { status: 'done', isDeleted: { $ne: true } };
       if (startDate) dateFilter.createdAt = { $gte: new Date(startDate) };
       if (endDate) {
         dateFilter.createdAt = dateFilter.createdAt || {};
