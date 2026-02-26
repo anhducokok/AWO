@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
@@ -10,7 +10,15 @@ import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginForm() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, accessToken, loading: authLoading } = useAuth();
+
+  // Already authenticated → go straight to dashboard
+  useEffect(() => {
+    if (!authLoading && accessToken) {
+      navigate('/', { replace: true });
+    }
+  }, [accessToken, authLoading]);
+
   const [activeTab, setActiveTab] = useState("login");
   const [formData, setFormData] = useState({
     email: "",
@@ -96,7 +104,7 @@ export default function LoginForm() {
             {/* Tabs */}
             <div className="flex gap-8 mb-8 border-b border-gray-200">
               <button
-                onClick={() => window.location.href = '/login'}
+                onClick={() => navigate('/login')}
                 className={`pb-3 text-sm font-medium transition-colors relative ${
                   activeTab === "login"
                     ? "text-black"
@@ -109,7 +117,7 @@ export default function LoginForm() {
                 )}
               </button>
               <button
-                onClick={() => window.location.href = '/register'}
+                onClick={() => navigate('/register')}
                 className={`pb-3 text-sm font-medium transition-colors ${
                   activeTab === "register"
                     ? "text-black"

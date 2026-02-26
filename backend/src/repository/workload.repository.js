@@ -14,7 +14,7 @@ class WorkloadRepository {
       // Get all active users (members and managers)
       const users = await User.find({
         isActive: true,
-        isDeleted: false,
+        isDeleted: { $ne: true },
         role: { $in: ['member', 'manager', 'admin'] }
       }).lean();
 
@@ -23,7 +23,7 @@ class WorkloadRepository {
         // Get assigned tickets that are not done or blocked
         const tickets = await Ticket.find({
           assignedTo: user._id,
-          isDeleted: false,
+          isDeleted: { $ne: true },
           status: { $nin: ['done', 'blocked'] }
         }).lean();
 
@@ -96,7 +96,7 @@ class WorkloadRepository {
       const user = await User.findOne({
         _id: userId,
         isActive: true,
-        isDeleted: false
+        isDeleted: { $ne: true }
       }).lean();
 
       if (!user) {
@@ -106,7 +106,7 @@ class WorkloadRepository {
       // Get user's tickets
       const tickets = await Ticket.find({
         assignedTo: userId,
-        isDeleted: false,
+        isDeleted: { $ne: true },
         status: { $nin: ['done'] }
       })
       .sort({ priority: 1, dueDate: 1 })
@@ -190,7 +190,7 @@ class WorkloadRepository {
       for (const overloadedUser of overloadedUsers) {
         const tickets = await Ticket.find({
           assignedTo: overloadedUser.id,
-          isDeleted: false,
+          isDeleted: { $ne: true },
           status: { $in: ['open', 'assigned', 'in_progress'] }
         })
         .sort({ priority: -1, dueDate: 1 })
@@ -253,7 +253,7 @@ class WorkloadRepository {
 
       const tickets = await Ticket.find({
         assignedTo: userId,
-        isDeleted: false,
+        isDeleted: { $ne: true },
         status: { $nin: ['done', 'blocked'] }
       }).lean();
 

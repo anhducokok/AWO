@@ -104,5 +104,35 @@ export const useTaskStore = createStore("taskStore", (set, get) =>({
     setFilters: (newFilters) => {
         set({ filters: { ...get().filters, ...newFilters } });
     },
+
+    // Fetch all tasks assigned to a specific user (used on HomePage kanban)
+    fetchMyTasks: async (userId, extraFilters = {}) => {
+        set({ loading: true });
+        try {
+            const res = await taskService.getTasksByAssignee(userId, { limit: 100, ...extraFilters });
+            set({
+                tasks: res.data.data || [],
+                pagination: res.data.pagination,
+                stats: res.data.stats || get().stats,
+            });
+        } catch (error) {
+            console.error('Error fetching my tasks:', error);
+            set({ tasks: [] });
+        } finally {
+            set({ loading: false });
+        }
+    },
+
+    // Group current tasks by status (derived helper for kanban)
+    getKanbanColumns: () => {
+        const tasks = get().tasks;
+        return {
+            todo:        tasks.filter(t => t.status === 'todo'),
+            in_progress: tasks.filter(t => t.status === 'in_progress'),
+            review:      tasks.filter(t => t.status === 'review'),
+            done:        tasks.filter(t => t.status === 'done'),
+        };
+    },
+
     // dọn dẹp state chi tiết khi không còn dùng nữa để tránh dữ liệu cũ gây bug UI.
 }))
