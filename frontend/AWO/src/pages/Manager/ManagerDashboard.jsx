@@ -6,8 +6,13 @@ import WorkloadHeatmap from '../../components/manager/WorkloadHeatmap';
 import AITaskQueue from '../../components/manager/AITaskQueue';
 import InterventionTools from '../../components/manager/InterventionTools';
 import { RefreshCw, Settings, Download } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 const ManagerDashboard = () => {
+  const user = JSON.parse(localStorage.getItem('user'));
+  const user_profile = useAuth();
+  console.log('👤 Current User:', user);
+  console.log('👤 User Profile:', user_profile);
   const navigate = useNavigate();
   const [selectedTask, setSelectedTask] = useState(null);
   const [refreshing, setRefreshing] = useState(false);

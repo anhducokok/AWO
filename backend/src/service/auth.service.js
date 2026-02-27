@@ -108,9 +108,13 @@ export const refreshTokenService = async (refreshToken) => {
         user.refreshToken = tokens.refreshToken;
         await user.save();
         
+        // Loại bỏ password và refreshToken trước khi trả về
+        const { password: _, refreshToken: __, ...userWithoutSensitiveData } = user.toObject();
+        
         return {
             accessToken: tokens.accessToken,
-            refreshToken: tokens.refreshToken
+            refreshToken: tokens.refreshToken,
+            user: userWithoutSensitiveData
         };
     } catch (error) {
         throw new Error('Invalid or expired refresh token');

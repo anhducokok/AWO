@@ -19,7 +19,7 @@ const httpServer = http.createServer(app);
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL, // Frontend URL
+  origin: process.env.FRONTEND_URL && 'http://localhost:5174', // Frontend URL
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']

@@ -50,6 +50,7 @@ export const AuthProvider = ({ children }) => {
         if (result.success && result.data.success) {
             setAccessToken(result.data.accessToken);
             setUser(result.data.user);
+            console.log('Login successful:', result.data.user);
             return { success: true };
         }
         
