@@ -71,7 +71,8 @@ export const refreshTokenController = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            accessToken: result.accessToken
+            accessToken: result.accessToken,
+            user: result.user
         });
     } catch (error) {
         res.status(401).json({
