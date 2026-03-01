@@ -110,13 +110,13 @@ class TaskService {
         sortOrder = 'desc',
       } = options;
 
-      const query = { isDeleted: false, ...filters };
-      const skip = (page - 1) * limit;
-      const sort = {};
-      sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
-
-      const tasks = await taskRepository.findAll(query, { skip, limit, sort });
-      const total = await taskRepository.count(query);
+      const tasks = await taskRepository.find(filters, {
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+      });
+      const total = await taskRepository.count(filters);
 
       return {
         tasks,

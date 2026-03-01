@@ -21,7 +21,7 @@ class TicketService {
     await eventService.broadcastEvent('ticket:created', {
       ticketId: ticket._id,
       number: ticket.number,
-      subject: ticket.subject,
+      title: ticket.title,
       priority: ticket.priority,
       status: ticket.status,
       reporterEmail: ticket.reporter?.email,
@@ -318,18 +318,16 @@ class TicketService {
 
   // Private business logic methods
   validateTicketData(data) {
-    if (!data.subject || data.subject.trim().length === 0) {
-      throw new Error('Ticket subject is required');
+    if (!data.title || data.title.trim().length === 0) {
+      throw new Error('Ticket title is required');
     }
     
-    if (!data.reporter || !data.reporter.email) {
-      throw new Error('Reporter email is required');
-    }
-    
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(data.reporter.email)) {
-      throw new Error('Invalid email format');
+    if (data.reporter?.email) {
+      // Validate email format only when provided
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(data.reporter.email)) {
+        throw new Error('Invalid reporter email format');
+      }
     }
   }
 
