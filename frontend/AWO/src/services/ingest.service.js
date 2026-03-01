@@ -10,6 +10,16 @@ const ingestService = {
     axiosInstance.get(`/ingest/${id}`),
 
   /**
+   * Submit a manual ingest from the web form → goes through AI triage
+   * @param {object} payload - { title, description, priority, category, requestedBy, createdBy }
+   */
+  submitManual: (payload) =>
+    axiosInstance.post('/ingest/manual', {
+      source: 'manual',
+      ...payload,
+    }),
+
+  /**
    * Approve an ingest → creates ticket
    * @param {string} id - ingest _id
    * @param {object} overrides - optional field overrides: { title, priority, category, assignedTo }

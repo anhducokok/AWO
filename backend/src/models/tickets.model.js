@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import Counter from './counter.model.js';
 
 // Main Ticket Schema
 const ticketSchema = new mongoose.Schema({
@@ -137,6 +138,22 @@ const ticketSchema = new mongoose.Schema({
 ticketSchema.index({ status: 1, priority: -1, createdAt: -1 });
 ticketSchema.index({ assignedTo: 1, status: 1 });
 ticketSchema.index({ number: 1 }, { unique: true });
+
+// Auto-generate ticket number before save
+ticketSchema.pre('save', async function (next) {
+  if (!this.isNew) return next();
+  try {
+    const counter = await Counter.findByIdAndUpdate(
+      'ticket',
+      { $inc: { seq: 1 } },
+      { new: true, upsert: true }
+    );
+    this.number = `AWO-${String(counter.seq).padStart(4, '0')}`;
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
 // Virtual for ticket age
 ticketSchema.virtual('age').get(function() {

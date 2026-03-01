@@ -56,7 +56,7 @@ class TaskController {
         sortBy = "createdAt",
         sortOrder = "desc",
         search,
-        isDeleted = isDeleted === undefined ? "false" : isDeleted,
+        isDeleted = "false",
       } = req.query;
 
       const filters = {};

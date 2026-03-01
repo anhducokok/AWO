@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Bell, Settings, LogOut, User, Menu } from "lucide-react";
+import CreateTicketModal from "@/components/ticket/CreateTicketModal";
 
 export default function Navbar({ onToggleSidebar }) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -15,7 +17,8 @@ export default function Navbar({ onToggleSidebar }) {
   };
 
   return (
-    <nav className="bg-white border-b border-gray-200 px-6 py-3 shadow-sm fixed top-0 left-0 right-0 z-50">
+    <>
+      <nav className="bg-white border-b border-gray-200 px-6 py-3 shadow-sm fixed top-0 left-0 right-0 z-50">
       <div className="flex items-center justify-between">
         {/* Left - Logo & Title */}
         <div className="flex items-center gap-4">
@@ -72,8 +75,8 @@ export default function Navbar({ onToggleSidebar }) {
         {/* Right - Actions */}
         <div className="flex items-center gap-3">
           {/* Create Button */}
-          <Button 
-            onClick={() => navigate('/tickets/new')}
+          <Button
+            onClick={() => setShowCreateModal(true)}
             className="bg-black hover:bg-gray-900 text-white text-sm h-9 shadow-md"
           >
             Tạo Ticket
@@ -135,5 +138,11 @@ export default function Navbar({ onToggleSidebar }) {
         </div>
       </div>
     </nav>
-  );
+
+    {showCreateModal && (
+      <CreateTicketModal
+        onClose={() => setShowCreateModal(false)}
+      />
+    )}
+  </>);
 }

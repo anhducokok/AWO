@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   UserCheck, 
   Zap, 
@@ -6,7 +6,8 @@ import {
   ArrowUp, 
   ArrowDown,
   RefreshCw,
-  AlertTriangle
+  AlertTriangle,
+  X
 } from 'lucide-react';
 
 const InterventionTools = ({ task, onAction }) => {
@@ -136,14 +137,31 @@ const ReassignModal = ({ task, onClose, onConfirm }) => {
     { id: '3', name: 'Bob Johnson', avatar_url: null },
   ]);
 
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 pt-14"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-        <div className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900">
             Reassign Task
           </h3>
+          <button
+            onClick={onClose}
+            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-700"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
 
+        <div className="p-6">
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Assign to
@@ -200,6 +218,12 @@ const ReassignModal = ({ task, onClose, onConfirm }) => {
 const PriorityModal = ({ task, onClose, onConfirm }) => {
   const [selectedPriority, setSelectedPriority] = useState(task.priority);
 
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
   const priorities = [
     { value: 'low', label: 'Low', color: 'bg-gray-100 text-gray-700' },
     { value: 'medium', label: 'Medium', color: 'bg-blue-100 text-blue-700' },
@@ -208,13 +232,23 @@ const PriorityModal = ({ task, onClose, onConfirm }) => {
   ];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 pt-14"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-        <div className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900">
             Change Priority
           </h3>
-
+          <button
+            onClick={onClose}
+            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-700"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="p-6">
           <div className="space-y-2 mb-4">
             {priorities.map((priority) => (
               <button

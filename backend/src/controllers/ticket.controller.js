@@ -4,40 +4,33 @@ class TicketController {
   async createTicket(req, res) {
     try {
       const {
-        subject,
+        title,
         description,
-        source = 'web',
+        source = 'manual',
         priority = 'medium',
         category = 'other',
         reporter,
-        tags = [],
+        labels = [],
         dueDate,
         estimatedResolutionTime,
       } = req.body;
 
       // Validate required fields
-      if (!subject) {
+      if (!title) {
         return res.status(400).json({
           success: false,
-          message: 'Ticket subject is required',
+          message: 'Ticket title is required',
         });
       }
 
-      // if (!reporter || !reporter.email) {
-      //   return res.status(400).json({
-      //     success: false,
-      //     message: 'Reporter email is required',
-      //   });
-      // }
-
       const ticketData = {
-        subject,
+        title,
         description,
         source,
         priority,
         category,
         reporter,
-        tags,
+        labels,
         dueDate: dueDate ? new Date(dueDate) : null,
         estimatedResolutionTime,
       };
