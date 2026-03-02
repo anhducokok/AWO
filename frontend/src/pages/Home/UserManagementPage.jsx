@@ -3,7 +3,7 @@ import Navbar from "@/components/layout/NavBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import AssignmentModal from "@/components/assignment/AssignmentModal";
 import { getUserWorkload, getAllUsers } from "@/services/user.service";
