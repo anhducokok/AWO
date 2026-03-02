@@ -1,4 +1,4 @@
-import IngestPayload from '../models/IngetPayload.js';
+import IngestPayload from '../models/ingetPayload.js';
 
 /**
  * Get all ingest payloads with pagination and filters
