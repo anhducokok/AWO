@@ -1,4 +1,4 @@
-import IngestPayload from '../models/IngetPayload.js';
+import IngestPayload from '../models/ingetPayload.js';
 import AI_TriangleService from '../modules/AI_Triagle/AI_Triangle.service.js';
 import Ticket from '../models/tickets.model.js';
 import User from '../models/users.model.js';
