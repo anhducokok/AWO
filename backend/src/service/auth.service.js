@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import User from '../models/users.model.js';
-import AuthRepository from '../repository/Auth.repository.js';
+import AuthRepository from '../repository/auth.repository.js';
 import { generateAccessToken, generateRefreshToken } from '../utils/jwt.js';
 
 const authRepo = new AuthRepository();
