@@ -12,6 +12,7 @@ import { getUserWorkload, getAllUsers } from "@/services/user.service";
 import { toast } from "sonner";
 import { 
   Search, 
+
   Filter, 
   UserPlus, 
   Edit, 
@@ -48,7 +49,7 @@ export default function UserManagementPage() {
       const usersResponse = await getAllUsers();
       const usersData = usersResponse.data || [];
       setUsers(usersData);
-
+      console.log('Loaded users:', usersData);
       // Load workloads for all users
       const workloadPromises = usersData.map(user => 
         getUserWorkload(user._id)
