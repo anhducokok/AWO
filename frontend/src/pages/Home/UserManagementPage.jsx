@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import Navbar from "@/components/layout/Navbar";
+import Navbar from "@/components/layout/NavBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
