@@ -1,5 +1,6 @@
 import ticketRepository from '../repository/ticket.repository.js';
 import eventService from './event.service.js';
+import User from '../models/users.model.js';
 
 class TicketService {
   /**
@@ -162,6 +163,18 @@ class TicketService {
    * Assign ticket to user with business validation
    */
   async assignTicket(ticketId, userId, assignedById) {
+    // Validate that the assignee is a leader
+    const assignee = await User.findById(userId).select('role isActive isDeleted').lean();
+    if (!assignee) {
+      throw new Error('Assigned user not found');
+    }
+    if (assignee.isDeleted || !assignee.isActive) {
+      throw new Error('Assigned user is inactive or deleted');
+    }
+    if (assignee.role !== 'leader') {
+      throw new Error('Tickets can only be assigned to users with the leader role');
+    }
+
     const ticket = await ticketRepository.updateById(ticketId, {
       assignedTo: userId,
       assignedBy: assignedById,

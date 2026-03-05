@@ -95,6 +95,7 @@ export default function UserManagementPage() {
   const getRoleBadgeVariant = (role) => {
     if (role === "admin") return "destructive";
     if (role === "manager") return "default";
+    if (role === "leader") return "outline";
     return "secondary";
   };
 

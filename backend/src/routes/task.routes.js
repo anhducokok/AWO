@@ -17,7 +17,7 @@ router.delete('/:id', taskController.deleteTask.bind(taskController));
 
 router.post(
   '/:id/assign',
-  authorize(['admin', 'manager']),
+  authorize(['admin', 'manager', 'leader']),
   taskController.assignTask.bind(taskController)
 );
 

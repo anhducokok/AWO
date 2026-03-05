@@ -23,8 +23,8 @@ router.get('/stats', ticketController.getTicketStats.bind(ticketController));
 // Search tickets
 router.get('/search', ticketController.searchTickets.bind(ticketController));
 
-// Get overdue tickets - Manager/Admin only
-router.get('/overdue', authorize(['admin', 'manager']), ticketController.getOverdueTickets.bind(ticketController));
+// Get overdue tickets - Manager/Admin/Leader
+router.get('/overdue', authorize(['admin', 'manager', 'leader']), ticketController.getOverdueTickets.bind(ticketController));
 
 // Get tickets by reporter email
 router.get('/reporter/:email', ticketController.getTicketsByReporter.bind(ticketController));
