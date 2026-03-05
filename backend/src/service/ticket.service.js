@@ -1,6 +1,8 @@
 import ticketRepository from '../repository/ticket.repository.js';
 import eventService from './event.service.js';
 import User from '../models/users.model.js';
+import taskRepository from '../repository/task.repository.js';
+import AI_TriangleService from '../modules/AI_Triagle/AI_Triangle.service.js';
 
 class TicketService {
   /**
@@ -179,7 +181,7 @@ class TicketService {
       assignedTo: userId,
       assignedBy: assignedById,
       assignedAt: new Date(),
-      status: 'assigned',
+      status: 'in_progress',
     });
     
     if (!ticket) {
@@ -451,6 +453,74 @@ class TicketService {
       overdueCount,
       averageResolutionTime: stats.averageResolutionTime || 0,
     };
+  }
+
+  /**
+   * AI phân tích ticket và đề xuất danh sách tasks
+   * Chỉ leader được gọi, ticket phải được assign cho leader đó
+   */
+  async aiSplitTasks(ticketId, leaderId) {
+    const ticket = await ticketRepository.findById(ticketId, { includeTasks: false, lean: true });
+    if (!ticket) throw new Error('Ticket not found');
+    if (ticket.assignedTo?.toString() !== leaderId.toString()) {
+      throw new Error('Bạn chỉ có thể phân tích ticket được assign cho mình');
+    }
+
+    const members = await User.find(
+      { role: 'member', isActive: true, isDeleted: false },
+      { _id: 1, name: 1, email: 1, skills: 1, currentWorkload: 1 }
+    ).lean();
+
+    const result = await AI_TriangleService.splitTicketIntoTasks(ticket, members);
+    return result;
+  }
+
+  /**
+   * Leader approve danh sách tasks → tạo thật trong DB
+   * tasks: [{ title, description, priority, estimatedHours, tags, suggestedMemberId }]
+   */
+  async approveTaskSplit(ticketId, tasks, leaderId) {
+    const ticket = await ticketRepository.findById(ticketId, { includeTasks: false, lean: true });
+    if (!ticket) throw new Error('Ticket not found');
+    if (ticket.assignedTo?.toString() !== leaderId.toString()) {
+      throw new Error('Bạn chỉ có thể approve task của ticket được assign cho mình');
+    }
+
+    const created = await Promise.all(
+      tasks.map((t) =>
+        taskRepository.create({
+          title: t.title,
+          description: t.description || '',
+          priority: t.priority || 'medium',
+          estimatedHours: t.estimatedHours || 0,
+          tags: t.tags || [],
+          ticketId,
+          createdBy: leaderId,
+          assignedTo: t.assignedMemberId || t.suggestedMemberId || null,
+          status: 'todo',
+        })
+      )
+    );
+
+    //  Cập nhật workload cho các member được assign
+    // t.assignedTo có thể là populated object sau populate() → dùng ._id để lấy id chính xác
+    const memberIds = [...new Set(
+      created
+        .map((t) => (t.assignedTo?._id ?? t.assignedTo)?.toString())
+        .filter(Boolean)
+    )];
+    await Promise.all(
+      memberIds.map((id) => User.findByIdAndUpdate(id, { $inc: { currentWorkload: 1 } }))
+    );
+
+    await eventService.broadcastEvent('ticket:tasks_created', {
+      ticketId,
+      taskCount: created.length,
+      createdBy: leaderId,
+      timestamp: new Date(),
+    });
+
+    return created;
   }
 }
 

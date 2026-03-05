@@ -266,5 +266,95 @@ class AI_TriangleService {
       isFallback: true,
     };
   }
+
+  /**
+   * Tách ticket thành danh sách tasks và suggest member phù hợp cho từng task
+   * @param {Object} ticket  - ticket document (plain object)
+   * @param {Array}  members - active member users
+   */
+  async splitTicketIntoTasks(ticket, members) {
+    const memberList = members
+      .map(
+        (m, i) =>
+          `${i + 1}. id="${m._id}" name="${m.name}" skills=[${(m.skills || []).map((s) => s.name).join(", ")}] workload=${m.currentWorkload || 0}`,
+      )
+      .join("\n");
+
+    const prompt = `
+Bạn là AI assistant chuyên phân tích và chia nhỏ công việc.
+
+Ticket cần xử lý:
+- Tiêu đề: ${ticket.title}
+- Mô tả: ${ticket.description || ""}
+- Danh mục: ${ticket.category || "other"}
+- Độ ưu tiên: ${ticket.priority || "medium"}
+- Labels: ${(ticket.labels || []).join(", ") || "không có"}
+- Ước tính tổng: ${ticket.estimatedEffort || 0} giờ
+
+Danh sách members available:
+${memberList || "Không có member nào"}
+
+Nhiệm vụ: Chia ticket thành 2-5 subtasks hợp lý. Với mỗi task, chọn member phù hợp nhất dựa trên kỹ năng và workload thấp nhất.
+
+Trả về JSON array (KHÔNG có markdown, chỉ JSON thuần):
+[
+  {
+    "title": "Tên task ngắn gọn",
+    "description": "Mô tả chi tiết việc cần làm",
+    "priority": "low|medium|high|urgent",
+    "estimatedHours": 2,
+    "tags": ["skill1", "skill2"],
+    "suggestedMemberId": "id của member",
+    "suggestedMemberName": "tên member",
+    "assignmentReason": "Lý do chọn member này"
+  }
+]
+
+Quy tắc:
+- Mỗi task phải có ý nghĩa rõ ràng và độc lập
+- Chọn member có kỹ năng phù hợp nhất với task
+- Ưu tiên member có workload thấp hơn khi kỹ năng tương đương
+- suggestedMemberId PHẢI là id có trong danh sách members ở trên
+- Nếu không có member nào, để suggestedMemberId = null
+`;
+
+    try {
+      const result = await getAIClient().models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
+
+      const text = result.text
+        .replace(/```json\n?/g, "")
+        .replace(/```\n?/g, "")
+        .trim();
+
+      const tasks = JSON.parse(text);
+
+      if (!Array.isArray(tasks) || tasks.length === 0) {
+        throw new Error("AI returned empty task list");
+      }
+
+      return { success: true, tasks };
+    } catch (err) {
+      console.error("splitTicketIntoTasks error:", err);
+      // Fallback: 1 task = toàn bộ ticket
+      return {
+        success: false,
+        tasks: [
+          {
+            title: ticket.title,
+            description: ticket.description || "",
+            priority: ticket.priority || "medium",
+            estimatedHours: ticket.estimatedEffort || 4,
+            tags: ticket.labels || [],
+            suggestedMemberId: members[0]?._id?.toString() || null,
+            suggestedMemberName: members[0]?.name || null,
+            assignmentReason: "Fallback — AI không phân tích được",
+          },
+        ],
+      };
+    }
+  }
 }
 export default new AI_TriangleService();

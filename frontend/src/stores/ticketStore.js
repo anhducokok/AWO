@@ -6,6 +6,8 @@ export const useTicketStore = createStore("ticketStore", (set, get) =>({
     ticket: null,
     loading: false,
     pagination: null,
+    aiSplitResult: null,   // { tasks: [...] } returned by AI
+    aiSplitLoading: false,
     filters: {
         status: '',
         priority: '',
@@ -115,6 +117,27 @@ export const useTicketStore = createStore("ticketStore", (set, get) =>({
       ),
     });
   },
+
+  // AI chia task: gọi AI → lưu vào aiSplitResult (chưa tạo DB)
+  aiSplitTasks: async (ticketId) => {
+    set({ aiSplitLoading: true, aiSplitResult: null });
+    try {
+      const res = await ticketService.aiSplitTasks(ticketId);
+      set({ aiSplitResult: res.data.data });
+      return res.data.data;
+    } finally {
+      set({ aiSplitLoading: false });
+    }
+  },
+
+  // Approve: tạo thật vào DB
+  approveTaskSplit: async (ticketId, tasks) => {
+    const res = await ticketService.approveTaskSplit(ticketId, tasks);
+    set({ aiSplitResult: null }); // reset panel
+    return res.data;
+  },
+
+  clearAiSplit: () => set({ aiSplitResult: null }),
 
   deleteTicket: async (id) => {
     await ticketService.deleteTicket(id);

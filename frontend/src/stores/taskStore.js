@@ -25,8 +25,9 @@ export const useTaskStore = createStore("taskStore", (set, get) =>({
         set({loading: true});
         try {
             const res = await taskService.getTasks(filters);
+            // controller returns { tasks, pagination } directly
             set({
-                tasks: res.data.data || [],
+                tasks: res.data.tasks || res.data.data || [],
                 pagination: res.data.pagination,
                 stats: res.data.stats || get().stats,
             })
