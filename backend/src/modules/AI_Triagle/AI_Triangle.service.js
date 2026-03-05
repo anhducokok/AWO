@@ -104,15 +104,17 @@ class AI_TriangleService {
 
   async suggestAssigneee(triangleResult, users) {
     try {
-      // Filter chỉ users active và available
-      const activeUsers = users.filter((u) => u.isActive && !u.isDeleted);
+      // Filter chỉ leaders active và available (tickets chỉ assign cho leader)
+      const activeUsers = users.filter(
+        (u) => u.isActive && !u.isDeleted && u.role === "leader",
+      );
 
       if (activeUsers.length === 0) {
         return {
           suggestedAssignee: null,
           alternativeAssignees: [],
           confidence: "none",
-          error: "No active users available",
+          error: "No active leaders available for ticket assignment",
         };
       }
 
@@ -120,12 +122,8 @@ class AI_TriangleService {
       const scores = activeUsers.map((user) => {
         let score = 0;
 
-        // 1. Role match (40 điểm)
-        if (user.role === triangleResult.suggestedAssigneeRole) {
-          score += 40;
-        } else if (user.role === "admin" || user.role === "manager") {
-          score += 20; // Admin/Manager có thể handle mọi thứ
-        }
+        // 1. Role: tất cả user ở đây đều là leader, cộng điểm cố định
+        score += 40; // Leader role luôn đủ điều kiện nhận ticket
 
         // 2. Skill match (30 điểm)
         const skillMatch = this._calculateSkillMatch(
@@ -219,10 +217,8 @@ class AI_TriangleService {
   _buildAssignmentReasoning(user, triangleResult, score) {
     const reasons = [];
 
-    // Role match
-    if (user.role === triangleResult.suggestedAssigneeRole) {
-      reasons.push(`✅ Role phù hợp: ${user.role}`);
-    }
+    // Role match - all candidates are leaders
+    reasons.push(`✅ Role: leader (đủ điều kiện nhận ticket)`);
 
     // Skill match
     const skillMatch = this._calculateSkillMatch(

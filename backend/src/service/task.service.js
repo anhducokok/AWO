@@ -1,5 +1,6 @@
 import taskRepository from '../repository/task.repository.js';
 import eventService from './event.service.js';
+import User from '../models/users.model.js';
 
 class TaskService {
   /**
@@ -58,6 +59,18 @@ class TaskService {
    */
   async assignTask(taskId, userId) {
     try {
+      // Validate that the assignee is a member
+      const assignee = await User.findById(userId).select('role isActive isDeleted').lean();
+      if (!assignee) {
+        throw new Error('Assigned user not found');
+      }
+      if (assignee.isDeleted || !assignee.isActive) {
+        throw new Error('Assigned user is inactive or deleted');
+      }
+      if (assignee.role !== 'member') {
+        throw new Error('Tasks can only be assigned to users with the member role');
+      }
+
       const task = await taskRepository.updateById(taskId, { assignedTo: userId });
       
       //   Broadcast event

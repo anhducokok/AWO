@@ -2,6 +2,56 @@ import {register} from "../service/auth.service.js"
 import workloadService from "../service/workload.service.js";
 import User from "../models/users.model.js";
 
+/**
+ * Manager/Admin tạo user mới
+ * POST /api/users/create
+ */
+export const createUserByManagerController = async (req, res) => {
+    const { name, email, password, role, skills, capacityHoursPerWeek, avatarUrl } = req.body;
+
+    // Chỉ cho phép tạo member hoặc leader
+    const ALLOWED_ROLES = ['member', 'leader'];
+
+    try {
+        if (!name || !email || !password) {
+            return res.status(400).json({
+                success: false,
+                message: 'name, email và password là bắt buộc'
+            });
+        }
+
+        if (role && !ALLOWED_ROLES.includes(role)) {
+            return res.status(403).json({
+                success: false,
+                message: `Manager chỉ được tạo user với role: ${ALLOWED_ROLES.join(', ')}`
+            });
+        }
+
+        const result = await register({ name, email, password, role: role || 'member' });
+
+        // Cập nhật thêm các trường mở rộng nếu có
+        if (skills || capacityHoursPerWeek !== undefined || avatarUrl) {
+            await User.findByIdAndUpdate(result.user._id, {
+                ...(skills && { skills }),
+                ...(capacityHoursPerWeek !== undefined && { capacityHoursPerWeek }),
+                ...(avatarUrl && { avatarUrl }),
+            });
+        }
+
+        res.status(201).json({
+            success: true,
+            message: 'Tạo user thành công',
+            data: result.user
+        });
+    } catch (error) {
+        const isDuplicate = error.message?.toLowerCase().includes('email');
+        res.status(isDuplicate ? 409 : 400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
 export const  registerController = async (req, res) =>{
     const {name,email, password, role} = req.body;
     

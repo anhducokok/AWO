@@ -1,6 +1,6 @@
 import {loginController, registerController, refreshTokenController, logoutController} from '../controllers/auth.controller.js';
-import {getWorkloadController, getTeamWorkloadController, getAllUsersController, getUserByIdController} from '../controllers/users.controller.js';
-import {authenticate} from '../middleware/auth.middleware.js';
+import {getWorkloadController, getTeamWorkloadController, getAllUsersController, getUserByIdController, createUserByManagerController} from '../controllers/users.controller.js';
+import {authenticate, authorize} from '../middleware/auth.middleware.js';
 import express from 'express';
 
 const router = express.Router();
@@ -17,6 +17,7 @@ router.post('/logout', logoutController);
 
 // User management routes (protected)
 router.get('/', getAllUsersController);
+router.post('/create', createUserByManagerController);
 router.get('/:id', authenticate, getUserByIdController);
 
 // Workload routes (protected)
