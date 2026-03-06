@@ -54,4 +54,10 @@ router.post('/:id/assign', authorize(['admin', 'manager']), ticketController.ass
 // Resolve ticket - Assignee or manager can resolve
 router.post('/:id/resolve', ticketController.resolveTicket.bind(ticketController));
 
+// AI split ticket into tasks - Leader only
+router.post('/:id/ai-split', authorize(['leader']), ticketController.aiSplitTasks.bind(ticketController));
+
+// Approve AI-suggested tasks and create them - Leader only
+router.post('/:id/approve-split', authorize(['leader']), ticketController.approveTaskSplit.bind(ticketController));
+
 export default router;

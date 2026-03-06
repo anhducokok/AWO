@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -15,7 +15,14 @@ import {
   AlertCircle,
   Hash,
   ExternalLink,
+  Sparkles,
+  Loader2,
+  UserCheck,
+  ListTodo,
 } from 'lucide-react';
+import { useTicketStore } from '@/stores/ticketStore';
+import { useAuth } from '@/context/AuthContext';
+import { toast } from 'sonner';
 
 // ─── helpers (same as parent page) ─────────────────────────────────────────
 
@@ -93,12 +100,58 @@ export default function TicketDetailModal({
   onDismiss,
   accepting = false,
 }) {
+  const { user } = useAuth();
+  const { aiSplitTasks, approveTaskSplit, clearAiSplit, aiSplitLoading } = useTicketStore();
+
+  const [aiTasks, setAiTasks] = useState(null);   // suggested tasks from AI
+  const [approving, setApproving] = useState(false);
+  const [approved, setApproved] = useState(false);
+
+  // Check if current user is the leader assigned to this ticket
+  const assignedId = (
+    ticket?.assignedTo?._id ??
+    ticket?.assignedTo
+  )?.toString();
+  const isLeaderAssigned =
+    user?.role === 'leader' &&
+    !!assignedId &&
+    assignedId === user?._id?.toString();
+
+  // Reset AI split state when ticket changes
+  useEffect(() => {
+    setAiTasks(null);
+    setApproved(false);
+  }, [ticket?._id]);
+
   // Close on Escape
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
+
+  const handleAISplit = async () => {
+    try {
+      const result = await aiSplitTasks(ticket._id);
+      setAiTasks(result?.tasks || []);
+    } catch (err) {
+      toast.error('Không thể phân tích ticket, vui lòng thử lại.');
+    }
+  };
+
+  const handleApprove = async () => {
+    setApproving(true);
+    try {
+      await approveTaskSplit(ticket._id, aiTasks);
+      setApproved(true);
+      setAiTasks(null);
+      toast.success(`Đã tạo ${aiTasks.length} tasks thành công!`);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Tạo tasks thất bại.');
+    } finally {
+      setApproving(false);
+    }
+  };
 
   if (!ticket) return null;
 
@@ -260,6 +313,120 @@ export default function TicketDetailModal({
               </div>
             </Section>
           )}
+
+          {/* ── AI Task Split Panel ── */}
+          {isLeaderAssigned && (
+            <Section icon={ListTodo} title="Phân chia Tasks bằng AI">
+              {/* Not yet triggered */}
+              {!aiTasks && !approved && (
+                <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-4 flex flex-col items-center gap-3 text-center">
+                  <Sparkles className="h-8 w-8 text-indigo-400" />
+                  <p className="text-sm text-indigo-700">
+                    Để AI phân tích ticket và tự động chia thành các subtasks với gợi ý member phù hợp.
+                  </p>
+                  <Button
+                    size="sm"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2"
+                    onClick={handleAISplit}
+                    disabled={aiSplitLoading}
+                  >
+                    {aiSplitLoading
+                      ? <><Loader2 className="h-4 w-4 animate-spin" />Đang phân tích...</>
+                      : <><Sparkles className="h-4 w-4" />Dùng AI để chia Tasks</>
+                    }
+                  </Button>
+                </div>
+              )}
+
+              {/* Approved success */}
+              {approved && (
+                <div className="rounded-lg border border-green-200 bg-green-50 p-4 flex items-center gap-3 text-green-700">
+                  <CheckCircle2 className="h-5 w-5 shrink-0" />
+                  <span className="text-sm font-medium">Tasks đã được tạo thành công và assign cho members.</span>
+                </div>
+              )}
+
+              {/* AI Suggestions */}
+              {aiTasks && aiTasks.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-xs text-gray-500">
+                    AI đề xuất <strong>{aiTasks.length} tasks</strong> — kiểm tra và approve để tạo chính thức.
+                  </p>
+                  <div className="space-y-2">
+                    {aiTasks.map((task, idx) => (
+                      <div
+                        key={idx}
+                        className="rounded-lg border border-indigo-100 bg-white p-3 space-y-1.5"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="text-sm font-semibold text-gray-800">{task.title}</span>
+                          <Badge
+                            variant={
+                              task.priority === 'urgent' || task.priority === 'high'
+                                ? 'destructive'
+                                : task.priority === 'medium' ? 'default' : 'secondary'
+                            }
+                            className="text-[10px] shrink-0"
+                          >
+                            {task.priority}
+                          </Badge>
+                        </div>
+                        {task.description && (
+                          <p className="text-xs text-gray-500 leading-relaxed">{task.description}</p>
+                        )}
+                        <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                          {/* Suggested Member */}
+                          {task.suggestedMemberName && (
+                            <span className="inline-flex items-center gap-1 text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full px-2 py-0.5">
+                              <UserCheck className="h-3 w-3" />
+                              {task.suggestedMemberName}
+                            </span>
+                          )}
+                          {/* Estimated hours */}
+                          {task.estimatedHours > 0 && (
+                            <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                              <Clock className="h-3 w-3" />{task.estimatedHours}h
+                            </span>
+                          )}
+                          {/* Tags */}
+                          {task.tags?.map((tag) => (
+                            <span key={tag} className="text-[10px] bg-gray-100 text-gray-500 rounded-full px-1.5 py-0.5">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                        {task.assignmentReason && (
+                          <p className="text-[11px] text-indigo-500 italic">"{task.assignmentReason}"</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2 pt-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-gray-500"
+                      onClick={() => setAiTasks(null)}
+                    >
+                      Huỷ
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white flex-1 gap-1.5"
+                      onClick={handleApprove}
+                      disabled={approving}
+                    >
+                      {approving
+                        ? <><Loader2 className="h-4 w-4 animate-spin" />Đang tạo...</>
+                        : <><CheckCircle2 className="h-4 w-4" />Approve & Tạo {aiTasks.length} Tasks</>
+                      }
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </Section>
+          )}
         </div>
 
         {/* ── Footer ── */}
@@ -270,6 +437,28 @@ export default function TicketDetailModal({
           </span>
 
           <div className="flex items-center gap-2">
+            {/* AI Split — leader shortcut in footer */}
+            {isLeaderAssigned && !approved && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 border-indigo-300 text-indigo-600 hover:bg-indigo-50"
+                onClick={aiTasks ? () => setAiTasks(null) : handleAISplit}
+                disabled={aiSplitLoading}
+              >
+                {aiSplitLoading
+                  ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Đang phân tích...</>
+                  : aiTasks
+                    ? <><X className="h-3.5 w-3.5" />Huỷ AI</>
+                    : <><Sparkles className="h-3.5 w-3.5" />Dùng AI chia Tasks</>
+                }
+              </Button>
+            )}
+            {isLeaderAssigned && approved && (
+              <span className="text-xs text-green-600 font-medium flex items-center gap-1">
+                <CheckCircle2 className="h-3.5 w-3.5" />Tasks đã tạo
+              </span>
+            )}
             {/* Accept / Dismiss — only when open + new assignment */}
             {isNew && ticket.status === 'open' && (
               <>

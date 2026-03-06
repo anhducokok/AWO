@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTaskStore } from '@/stores/taskStore';
+import { useAuth } from '@/context/AuthContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,14 +22,26 @@ const TaskListPage = () => {
     stats,
   } = useTaskStore();
 
+  const { user } = useAuth();
+  const isMember = user?.role === 'member';
+
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
-    fetchTasks();
-  }, []);
+    // Members only see tasks assigned to themselves
+    if (isMember && user?._id) {
+      fetchTasks({ assignedTo: user._id });
+    } else {
+      fetchTasks();
+    }
+  }, [user?._id]);
 
   const handleRefresh = () => {
-    fetchTasks();
+    if (isMember && user?._id) {
+      fetchTasks({ assignedTo: user._id });
+    } else {
+      fetchTasks();
+    }
   };
 
   const getPriorityColor = (priority) => {
@@ -43,10 +56,10 @@ const TaskListPage = () => {
 
   const getStatusColor = (status) => {
     const colors = {
-      pending: 'default',
-      in_progress: 'info',
-      completed: 'success',
-      cancelled: 'secondary',
+      todo:        'secondary',
+      in_progress: 'default',
+      review:      'outline',
+      done:        'default',
     };
     return colors[status] || 'default';
   };
@@ -56,9 +69,13 @@ const TaskListPage = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Tasks</h1>
+          <h1 className="text-3xl font-bold">
+            {isMember ? 'Tasks của tôi' : 'Tasks'}
+          </h1>
           <p className="text-muted-foreground mt-1">
-            Manage tasks and track progress
+            {isMember
+              ? 'Danh sách các tasks đã được assign cho bạn'
+              : 'Manage tasks and track progress'}
           </p>
         </div>
         <div className="flex gap-2">
@@ -134,9 +151,9 @@ const TaskListPage = () => {
                         {task.actualHours && (
                           <span>Actual: {task.actualHours}h</span>
                         )}
-                        {task.dueDate && (
+                        {task.deadline && (
                           <span>
-                            Due: {new Date(task.dueDate).toLocaleDateString()}
+                            Due: {new Date(task.deadline).toLocaleDateString('vi-VN')}
                           </span>
                         )}
                       </div>

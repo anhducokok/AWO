@@ -39,7 +39,12 @@ class TicketService {
     getOverdueTickets(params = {}){
         return axiosInstance.get(`/tickets/overdue`, {params})
     }
-
+    aiSplitTasks(id){
+        return axiosInstance.post(`/tickets/${id}/ai-split`);
+    }
+    approveTaskSplit(id, tasks){
+        return axiosInstance.post(`/tickets/${id}/approve-split`, { tasks });
+    }
 }
 
 // Export as named exports for easier use in components

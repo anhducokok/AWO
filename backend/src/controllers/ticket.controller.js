@@ -391,6 +391,51 @@ class TicketController {
       });
     }
   }
+
+  /**
+   * Leader gọi AI để phân tích ticket thành danh sách tasks + suggest member
+   * POST /api/tickets/:id/ai-split
+   */
+  async aiSplitTasks(req, res) {
+    try {
+      const { id } = req.params;
+      const leaderId = req.user._id;
+      const result = await ticketService.aiSplitTasks(id, leaderId);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      const statusCode = error.message.includes('not found') ? 404
+        : error.message.includes('assign') ? 403 : 500;
+      res.status(statusCode).json({ success: false, message: error.message });
+    }
+  }
+
+  /**
+   * Leader approve danh sách tasks → tạo thật trong DB
+   * POST /api/tickets/:id/approve-split
+   * body: { tasks: [...] }
+   */
+  async approveTaskSplit(req, res) {
+    try {
+      const { id } = req.params;
+      const { tasks } = req.body;
+      const leaderId = req.user._id;
+
+      if (!Array.isArray(tasks) || tasks.length === 0) {
+        return res.status(400).json({ success: false, message: 'tasks array is required' });
+      }
+
+      const created = await ticketService.approveTaskSplit(id, tasks, leaderId);
+      res.status(201).json({
+        success: true,
+        message: `Đã tạo ${created.length} tasks thành công`,
+        data: created,
+      });
+    } catch (error) {
+      const statusCode = error.message.includes('not found') ? 404
+        : error.message.includes('assign') ? 403 : 500;
+      res.status(statusCode).json({ success: false, message: error.message });
+    }
+  }
 }
 
 export default new TicketController();
