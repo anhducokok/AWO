@@ -6,7 +6,7 @@ let ioInstance = null;
 let redisListenerRegistered = false;
 
 const getAllowedOrigins = () => {
-  const rawOrigins = process.env.FRONTEND_URL && "http://localhost:5174";
+  const rawOrigins = process.env.FRONTEND_URL || "http://localhost:5174";
   const origins = rawOrigins
     .split(",")
     .map((origin) => origin.trim())

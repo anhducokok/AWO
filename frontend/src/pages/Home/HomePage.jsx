@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useTaskStore } from "@/stores/taskStore";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Clock, RefreshCw, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -23,6 +24,8 @@ const STATUS_COLUMNS = [
   { key: "done",        label: "Hoàn thành",       badgeVariant: "secondary", accent: "#10b981" },
 ];
 
+const STATUS_ORDER = { todo: 0, in_progress: 1, review: 2, done: 3 };
+
 const getInitials = (name = "") =>
   name.split(" ").slice(-2).map(w => w[0]).join("").toUpperCase() || "?";
 
@@ -31,14 +34,16 @@ const isOverdue = (deadline) =>
 
 // ─── TaskCard ────────────────────────────────────────────────────────────────
 
-const TaskCard = ({ task }) => {
+const TaskCard = ({ task, onDragStart }) => {
   const pm = PRIORITY_META[task.priority] ?? PRIORITY_META.medium;
   const overdue = task.status !== "done" && isOverdue(task.deadline);
   const assigneeName = task.assignedTo?.name ?? task.assignedTo?.email ?? null;
 
   return (
     <Card
-      className="hover:shadow-lg transition-all cursor-pointer group border-l-4"
+      draggable
+      onDragStart={(e) => onDragStart(e, task)}
+      className="hover:shadow-lg transition-all cursor-grab active:cursor-grabbing active:opacity-60 active:scale-95 group border-l-4"
       style={{ borderLeftColor: pm.color }}
     >
       <CardHeader className="pb-2">
@@ -89,43 +94,100 @@ const TaskCard = ({ task }) => {
 
 // ─── Column ──────────────────────────────────────────────────────────────────
 
-const Column = ({ col, tasks, loading }) => (
-  <div className="flex-1 min-w-[280px] max-w-[320px]">
-    <div
-      className="flex items-center gap-2 mb-4 pb-3 border-b-2"
-      style={{ borderColor: col.accent }}
-    >
-      <h2 className="font-bold text-sm text-gray-700 uppercase tracking-wide">
-        {col.label}
-      </h2>
-      <Badge variant={col.badgeVariant} className="text-xs px-2 py-0.5">
-        {tasks.length}
-      </Badge>
-    </div>
+const Column = ({ col, tasks, loading, onTaskDragStart, onTaskDrop, canDrop }) => {
+  const [isDragOver, setIsDragOver] = useState(false);
+  // Track nested drag-enter/leave with a counter to avoid flicker
+  const dragCounter = useRef(0);
 
-    <div className="space-y-3 min-h-[120px]">
-      {loading ? (
-        // skeleton
-        Array.from({ length: 2 }).map((_, i) => (
-          <div key={`sk-${i}`} className="h-24 bg-gray-200 rounded-lg animate-pulse" />
-        ))
-      ) : tasks.length === 0 ? (
-        <div className="h-24 flex items-center justify-center border-2 border-dashed border-gray-200 rounded-lg">
-          <span className="text-xs text-gray-400">Không có tác vụ</span>
-        </div>
-      ) : (
-        tasks.map(task => <TaskCard key={task._id} task={task} />)
-      )}
+  const handleDragOver = (e) => {
+    if (!canDrop) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDragEnter = (e) => {
+    if (!canDrop) return;
+    e.preventDefault();
+    dragCounter.current += 1;
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = () => {
+    dragCounter.current -= 1;
+    if (dragCounter.current === 0) setIsDragOver(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    dragCounter.current = 0;
+    setIsDragOver(false);
+    if (!canDrop) return;
+    const taskId = e.dataTransfer.getData("taskId");
+    if (taskId) onTaskDrop(taskId, col.key);
+  };
+
+  return (
+    <div
+      className="flex-1 min-w-[280px] max-w-[320px]"
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <div
+        className="flex items-center gap-2 mb-4 pb-3 border-b-2"
+        style={{ borderColor: col.accent }}
+      >
+        <h2 className="font-bold text-sm text-gray-700 uppercase tracking-wide">
+          {col.label}
+        </h2>
+        <Badge variant={col.badgeVariant} className="text-xs px-2 py-0.5">
+          {tasks.length}
+        </Badge>
+      </div>
+
+      <div
+        className={`space-y-3 min-h-[120px] rounded-xl transition-all duration-150 p-1 -m-1 ${
+          isDragOver && canDrop
+            ? "ring-2 ring-offset-1 ring-blue-400 bg-blue-50/50"
+            : ""
+        }`}
+      >
+        {loading ? (
+          Array.from({ length: 2 }).map((_, i) => (
+            <div key={`sk-${i}`} className="h-24 bg-gray-200 rounded-lg animate-pulse" />
+          ))
+        ) : tasks.length === 0 ? (
+          <div className={`h-24 flex items-center justify-center border-2 border-dashed rounded-lg transition-colors ${
+            isDragOver && canDrop ? "border-blue-400 bg-blue-50" : "border-gray-200"
+          }`}>
+            <span className="text-xs text-gray-400">
+              {isDragOver && canDrop ? "Thả vào đây" : "Không có tác vụ"}
+            </span>
+          </div>
+        ) : (
+          tasks.map(task => (
+            <TaskCard
+              key={task._id}
+              task={task}
+              onDragStart={onTaskDragStart}
+            />
+          ))
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ─── HomePage ────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
   const { user } = useAuth();
-  const { tasks, loading, fetchMyTasks, getKanbanColumns, stats } = useTaskStore();
+  const { tasks, loading, fetchMyTasks, getKanbanColumns, moveTaskStatus, updateTask } = useTaskStore();
   const [activeFilter, setActiveFilter] = useState("all");
+  // Track which task is being dragged (to compute valid drop targets)
+  const draggingTask = useRef(null);
+  const [dragSourceStatus, setDragSourceStatus] = useState(null);
 
   useEffect(() => {
     if (user?._id) {
@@ -139,14 +201,53 @@ export default function HomePage() {
 
   const columns = getKanbanColumns();
 
-  // apply quick priority filter
   const filtered = (colTasks) => {
     if (activeFilter === "all") return colTasks;
     return colTasks.filter(t => t.priority === activeFilter);
   };
 
+  // ── Drag handlers ─────────────────────────────────────────────────────────
+
+  const handleTaskDragStart = (e, task) => {
+    e.dataTransfer.setData("taskId", task._id);
+    e.dataTransfer.effectAllowed = "move";
+    draggingTask.current = task;
+    setDragSourceStatus(task.status);
+  };
+
+  const handleDragEnd = () => {
+    draggingTask.current = null;
+    setDragSourceStatus(null);
+  };
+
+  const handleTaskDrop = async (taskId, newStatus) => {
+    const task = tasks.find(t => t._id === taskId);
+    if (!task) return;
+
+    // Forward-only guard
+    if (STATUS_ORDER[newStatus] <= STATUS_ORDER[task.status]) return;
+
+    // Optimistic update
+    moveTaskStatus(taskId, newStatus);
+
+    try {
+      await updateTask(taskId, { status: newStatus });
+      toast.success(`Đã chuyển sang "${STATUS_COLUMNS.find(c => c.key === newStatus)?.label}"`);
+    } catch {
+      // Revert on failure
+      fetchMyTasks(user._id);
+      toast.error("Cập nhật thất bại, vui lòng thử lại.");
+    }
+  };
+
+  // A column can accept a drop only if the dragged task can move forward into it
+  const canDropIntoColumn = (colKey) => {
+    if (!dragSourceStatus) return false;
+    return STATUS_ORDER[colKey] > STATUS_ORDER[dragSourceStatus];
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" onDragEnd={handleDragEnd}>
         {/* Board Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -203,6 +304,9 @@ export default function HomePage() {
               col={col}
               tasks={filtered(columns[col.key] ?? [])}
               loading={loading}
+              onTaskDragStart={handleTaskDragStart}
+              onTaskDrop={handleTaskDrop}
+              canDrop={canDropIntoColumn(col.key)}
             />
           ))}
         </div>

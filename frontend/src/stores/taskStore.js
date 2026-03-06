@@ -112,7 +112,7 @@ export const useTaskStore = createStore("taskStore", (set, get) =>({
         try {
             const res = await taskService.getTasksByAssignee(userId, { limit: 100, ...extraFilters });
             set({
-                tasks: res.data.data || [],
+                tasks: res.data.tasks || res.data.data || [],
                 pagination: res.data.pagination,
                 stats: res.data.stats || get().stats,
             });
@@ -122,6 +122,15 @@ export const useTaskStore = createStore("taskStore", (set, get) =>({
         } finally {
             set({ loading: false });
         }
+    },
+
+    // Optimistic local status update for drag & drop (no API call)
+    moveTaskStatus: (id, newStatus) => {
+        set({
+            tasks: get().tasks.map((t) =>
+                t._id === id ? { ...t, status: newStatus } : t
+            ),
+        });
     },
 
     // Group current tasks by status (derived helper for kanban)
