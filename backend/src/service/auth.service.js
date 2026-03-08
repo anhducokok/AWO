@@ -2,7 +2,6 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import User from '../models/users.model.js';
 import AuthRepository from '../repository/auth.repository.js';
-import { generateAccessToken, generateRefreshToken } from '../utils/jwt.js';
 
 const authRepo = new AuthRepository();
 
@@ -23,9 +22,6 @@ export const generateToken = (user) => {
 };
 
 //basic login service
-// Todo: thêm chức năng ghi log đăng nhập thất bại,
- // giới hạn số lần đăng nhập thất bại để tránh tấn công brute-force
- // check refresh token của model
 export const login = async(email, password) => {
     const user = await authRepo.login(email, password);
     if(!user){
@@ -35,6 +31,15 @@ export const login = async(email, password) => {
     if(!isMatch){
         throw new Error('Invalid password');
     }
+
+    // RBAC: block login for non-ACTIVE accounts
+    if (user.status === 'PENDING') {
+        throw new Error('Your account is pending admin approval');
+    }
+    if (user.status === 'REJECTED') {
+        throw new Error('Your account registration has been rejected');
+    }
+
     const tokens = generateToken(user);
     
     // Cập nhật refresh token vào database
@@ -50,8 +55,8 @@ export const login = async(email, password) => {
         user: userWithoutSensitiveData
     };
 };
-// register service
-export const register = async({name,email, password, role}) =>{
+// register service — new accounts are PENDING until admin approves
+export const register = async({name,email, password, role, status}) =>{
     if(!name || !email || !password){
         throw new Error("Missing required field!")
     }
@@ -64,23 +69,16 @@ export const register = async({name,email, password, role}) =>{
         name, 
         email,
         password,
-        role: role || "member"
+        role: role || "member",
+        // Default PENDING for self-registration; callers (e.g. admin) can pass ACTIVE
+        status: status || "PENDING"
     });
 
-    const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
-    
-    // Cập nhật refresh token vào database
-    user.refreshToken = refreshToken;
-    await user.save();
-    
     //  Loại bỏ password và refreshToken trước khi trả về client
     const {password: _, refreshToken: __, ...userWithoutPassword} = user.toObject();
    
     return {
-        user: userWithoutPassword, 
-        accessToken, 
-        refreshToken
+        user: userWithoutPassword
     };
 };
 

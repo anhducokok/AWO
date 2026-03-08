@@ -10,6 +10,12 @@ const userSchema = new mongoose.Schema(
       enum: ["admin", "member", "manager", "leader"],
       default: "member",
     },
+    // RBAC account status — controlled by admin
+    status: {
+      type: String,
+      enum: ["PENDING", "ACTIVE", "REJECTED"],
+      default: "PENDING",
+    },
     skills: [
       {
         name: { type: String },

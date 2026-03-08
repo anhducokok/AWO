@@ -31,12 +31,13 @@ export const loginController = async (req, res) => {
 };
 
 export const registerController = async (req, res) => {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
     try {
-        const result = await register({ name, email, password, role });
+        // Self-registration: role defaults to member, status defaults to PENDING
+        const result = await register({ name, email, password });
         res.status(201).json({
             success: true,
-            message: 'User registered successfully',
+            message: 'Registration successful. Your account is pending admin approval.',
             user: result.user
         });
     } catch (error) {
