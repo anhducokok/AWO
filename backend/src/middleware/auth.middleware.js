@@ -12,6 +12,10 @@ export const authenticate = async (req, res, next) => {
     if (!user) {
         return res.status(401).json({ message: 'User not found' });
     }
+    // RBAC: only ACTIVE accounts can access protected routes
+    if (user.status !== 'ACTIVE') {
+        return res.status(403).json({ message: 'Account is not active' });
+    }
     req.user = user;
     next();
     } catch (error) {

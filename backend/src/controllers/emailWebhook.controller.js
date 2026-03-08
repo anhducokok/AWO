@@ -1,11 +1,8 @@
 import { processEmailIngest } from '../service/ingest.service.js';
 import crypto from 'crypto';
 
-// ─── Payload normalizer ───────────────────────────────────────────────────────
-// Handles Resend Inbound, ForwardEmail, SendGrid, and plain JSON
 function normalizeEmailPayload(body) {
-  // Resend Inbound wraps payload inside body.data
-  // { type: "email.received", created_at: "...", data: { from, to, subject, text, html, ... } }
+
   const src = body.data ?? body;
 
   const from    = src.from    ?? src.sender ?? src.envelope?.from ?? '';
@@ -25,7 +22,7 @@ function normalizeEmailPayload(body) {
 // ─── HMAC verification (ForwardEmail) ────────────────────────────────────────
 function verifyForwardEmailSignature(req) {
   const secret = process.env.FORWARDEMAIL_WEBHOOK_SECRET;
-  if (!secret) return true; // skip if not configured
+  if (!secret) return true; 
 
   const signature = req.headers['x-forwardemail-signature'];
   if (!signature) return false;
@@ -38,15 +35,8 @@ function verifyForwardEmailSignature(req) {
   return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(hmac));
 }
 
-// ─── Controllers ──────────────────────────────────────────────────────────────
-
-/**
- * POST /api/webhooks/email
- * Called by ForwardEmail / Resend Inbound / any email forwarding service.
- */
 export async function receiveEmailWebhook(req, res) {
   try {
-    // Verify signature when ForwardEmail secret is configured
     if (!verifyForwardEmailSignature(req)) {
       return res.status(401).json({ success: false, message: 'Invalid webhook signature' });
     }
@@ -72,11 +62,6 @@ export async function receiveEmailWebhook(req, res) {
   }
 }
 
-/**
- * POST /api/webhooks/email/simulate
- * Dev-only: simulate an inbound email without a real email service.
- * Body: { from, to, subject, text }
- */
 export async function simulateEmailWebhook(req, res) {
   if (process.env.NODE_ENV === 'production') {
     return res.status(404).json({ message: 'Not found' });

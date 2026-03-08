@@ -27,7 +27,8 @@ export const createUserByManagerController = async (req, res) => {
             });
         }
 
-        const result = await register({ name, email, password, role: role || 'member' });
+        // Admin-created users are immediately ACTIVE — no approval needed
+        const result = await register({ name, email, password, role: role || 'member', status: 'ACTIVE' });
 
         // Cập nhật thêm các trường mở rộng nếu có
         if (skills || capacityHoursPerWeek !== undefined || avatarUrl) {
@@ -52,15 +53,19 @@ export const createUserByManagerController = async (req, res) => {
     }
 };
 
-export const  registerController = async (req, res) =>{
-    const {name,email, password, role} = req.body;
-    
+export const registerController = async (req, res) => {
+    const { name, email, password } = req.body;
+
     try {
-       
-      const user = await register({name,email, password, role});
-      res.status(200).json({message: "Register Success!",data: user})
+        // Self-registration: role defaults to member, status defaults to PENDING
+        const result = await register({ name, email, password });
+        res.status(201).json({
+            success: true,
+            message: 'Registration successful. Your account is pending admin approval.',
+            data: result.user
+        });
     } catch (error) {
-        res.status(400).json({message: error.message});
+        res.status(400).json({ success: false, message: error.message });
     }
 }
 
@@ -164,5 +169,62 @@ export const getTeamWorkloadController = async (req, res) => {
             message: "Failed to calculate team workload",
             error: error.message
         });
+    }
+};
+
+// ─── RBAC: Admin user-approval management ────────────────────────────────────
+
+/**
+ * List all PENDING registrations
+ * GET /api/users/admin/pending
+ */
+export const getPendingUsersController = async (req, res) => {
+    try {
+        const users = await User.find(
+            { status: 'PENDING', isDeleted: false },
+            { password: 0, refreshToken: 0 }
+        ).sort({ createdAt: 1 });
+
+        res.status(200).json({ success: true, data: users });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/**
+ * Approve a user registration
+ * PATCH /api/users/admin/:id/approve
+ */
+export const approveUserController = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const user = await User.findOneAndUpdate(
+            { _id: id, isDeleted: false },
+            { status: 'ACTIVE' },
+            { new: true, projection: { password: 0, refreshToken: 0 } }
+        );
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+        res.status(200).json({ success: true, message: 'User approved', data: user });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/**
+ * Reject a user registration
+ * PATCH /api/users/admin/:id/reject
+ */
+export const rejectUserController = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const user = await User.findOneAndUpdate(
+            { _id: id, isDeleted: false },
+            { status: 'REJECTED' },
+            { new: true, projection: { password: 0, refreshToken: 0 } }
+        );
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+        res.status(200).json({ success: true, message: 'User rejected', data: user });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
 };
