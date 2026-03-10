@@ -28,99 +28,115 @@ const Sidebar = ({ isOpen }) => {
 
   // Define navigation items based on roles
   const getNavigationItems = () => {
-    const commonItems = [
-      {
-        title: 'Tổng quan',
-        icon: LayoutDashboard,
-        path: '/',
-        roles: ['admin', 'manager', 'member']
-      },
-      {
-        title: 'Tickets',
-        icon: Ticket,
-        path: '/tickets',
-        roles: ['admin', 'manager', 'member']
-      },
-      {
-        title: 'Tasks',
-        icon: CheckSquare,
-        path: '/tasks',
-        roles: ['admin', 'manager', 'member']
-      }
-    ];
-
-    const managerItems = [
-      {
-        title: 'Manager Dashboard',
-        icon: FolderKanban,
-        path: '/manager/dashboard',
-        roles: ['admin', 'manager']
-      },
-      {
-        title: 'AI Ingest Review',
-        icon: Inbox,
-        path: '/manager/ingest-review',
-        roles: ['admin', 'manager']
-      },
-      {
-        title: 'Workload Analytics',
-        icon: BarChart3,
-        path: '/manager/analytics',
-        roles: ['admin', 'manager']
-      }
-    ];
-
+    // Admin-only items (website management)
     const adminItems = [
+      {
+        title: 'Admin Dashboard',
+        icon: LayoutDashboard,
+        path: '/admin/dashboard',
+        roles: ['admin']
+      },
       {
         title: 'Quản lý Users',
         icon: Users,
-        path: '/users',
-        roles: ['admin', 'manager']
+        path: '/admin/users',
+        roles: ['admin']
+      },
+      {
+        title: 'Pending Approvals',
+        icon: UserCog,
+        path: '/admin/pending',
+        roles: ['admin']
       },
       {
         title: 'Phân quyền',
         icon: Shield,
-        path: '/permissions',
-        roles: ['admin']
-      },
-      {
-        title: 'Workflows',
-        icon: Workflow,
-        path: '/workflows',
+        path: '/admin/permissions',
         roles: ['admin']
       },
       {
         title: 'Cấu hình hệ thống',
         icon: Settings,
-        path: '/settings',
+        path: '/admin/settings',
         roles: ['admin']
       }
     ];
 
-    const memberItems = [
+    // Regular user items (work-related)
+    const userItems = [
+      {
+        title: 'Tổng quan',
+        icon: LayoutDashboard,
+        path: '/',
+        roles: ['member', 'manager', 'leader']
+      },
+      {
+        title: 'Tickets',
+        icon: Ticket,
+        path: '/tickets',
+        roles: ['member', 'manager', 'leader']
+      },
+      {
+        title: 'Tasks',
+        icon: CheckSquare,
+        path: '/tasks',
+        roles: ['member', 'manager', 'leader']
+      },
       {
         title: 'My Tasks',
         icon: UserCog,
         path: '/my-tasks',
-        roles: ['member', 'manager', 'admin']
+        roles: ['member', 'manager', 'leader']
       },
       {
         title: 'Time Tracking',
         icon: Clock,
         path: '/time-tracking',
-        roles: ['member', 'manager', 'admin']
+        roles: ['member', 'manager', 'leader']
       }
     ];
 
-    return [...commonItems, ...managerItems, ...memberItems, ...adminItems];
+    // Manager-specific items (team management)
+    const managerItems = [
+      {
+        title: 'Manager Dashboard',
+        icon: FolderKanban,
+        path: '/manager/dashboard',
+        roles: ['manager']
+      },
+      {
+        title: 'AI Ingest Review',
+        icon: Inbox,
+        path: '/manager/ingest-review',
+        roles: ['manager']
+      },
+      {
+        title: 'Workload Analytics',
+        icon: BarChart3,
+        path: '/manager/analytics',
+        roles: ['manager']
+      },
+      {
+        title: 'Workflows',
+        icon: Workflow,
+        path: '/manager/workflows',
+        roles: ['manager']
+      }
+    ];
+
+    // Return items based on role
+    if (!user?.role) return [];
+    
+    if (user.role === 'admin') {
+      return adminItems;
+    } else if (user.role === 'manager') {
+      return [...userItems, ...managerItems];
+    } else {
+      return userItems;
+    }
   };
 
-  const navigationItems = getNavigationItems().filter((item) => {
-    if (loading || !user?.role) {
-      return ['/', '/tickets', '/tasks'].includes(item.path);
-    }
-    return item.roles.includes(user.role);
-  });
+  const navigationItems = getNavigationItems();
 
   const isActive = (path) => {
     if (path === '/') {
@@ -189,11 +205,11 @@ const Sidebar = ({ isOpen }) => {
           })}
         </nav>
 
-        {/* Quick Stats for Manager/Admin */}
-        {(user?.role === 'manager' || user?.role === 'admin') && (
+        {/* Quick Stats for Manager only */}
+        {user?.role === 'manager' && (
           <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
             <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">
-              Quick Stats
+              Team Stats
             </h3>
             <div className="space-y-2">
               <div className="flex justify-between items-center">
@@ -207,6 +223,29 @@ const Sidebar = ({ isOpen }) => {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Team Members</span>
                 <span className="text-sm font-semibold text-gray-900">12</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Admin Stats */}
+        {user?.role === 'admin' && (
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <h3 className="text-xs font-semibold text-blue-600 uppercase mb-3">
+              System Status
+            </h3>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Pending Users</span>
+                <span className="text-sm font-semibold text-orange-600">5</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Total Users</span>
+                <span className="text-sm font-semibold text-gray-900">47</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Active Users</span>
+                <span className="text-sm font-semibold text-green-600">42</span>
               </div>
             </div>
           </div>

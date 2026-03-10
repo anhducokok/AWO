@@ -24,10 +24,20 @@ const userSchema = new mongoose.Schema(
     ],
     capacityHoursPerWeek: { type: Number, default: 40 },
     currentWorkload: { type: Number, default: 0 }, // Number of active tasks
-    
+
     // Availability
     isAvailable: { type: Boolean, default: true },
     avatarUrl: String,
+
+    // Additional profile fields for pending approval
+    phone: { type: String },
+    department: { type: String },
+    joinReason: { type: String }, // Why they want to join
+    experience: { type: String }, // Work experience details
+
+    // Rejection fields
+    rejectionReason: { type: String },
+    rejectedAt: { type: Date },
 
     // authentication fields
     password: { type: String, required: true, minlength: 8 },
@@ -36,7 +46,7 @@ const userSchema = new mongoose.Schema(
 
     // refresh token
     refreshToken: String,
-    
+
     // status fields
     isActive: {
       type: Boolean,
@@ -44,12 +54,12 @@ const userSchema = new mongoose.Schema(
     },
     isDeleted: { type: Boolean, default: false },
   },
-  { timestamps: true, collection: "users" }
+  { timestamps: true, collection: "users" },
 );
 // hash password before saving
 // userSchema.pre("save", async function (next) {
 //   if (!this.isModified("password")) return next();
-  
+
 //      try {
 //     this.password = await bcrypt.hash(this.password, 12);
 //     return next();

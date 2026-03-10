@@ -74,13 +74,25 @@ export default function Navbar({ onToggleSidebar }) {
 
         {/* Right - Actions */}
         <div className="flex items-center gap-3">
-          {/* Create Button */}
-          <Button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-black hover:bg-gray-900 text-white text-sm h-9 shadow-md"
-          >
-            Tạo Ticket
-          </Button>
+          {/* Create Button - Only for active users (non-admin roles) */}
+          {user?.role !== 'admin' && user?.status === 'ACTIVE' && (
+            <Button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-black hover:bg-gray-900 text-white text-sm h-9 shadow-md"
+            >
+              Tạo Ticket
+            </Button>
+          )}
+
+          {/* Admin User Management */}
+          {user?.role === 'admin' && (
+            <Button
+              onClick={() => navigate('/admin/users')}
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm h-9 shadow-md"
+            >
+              Quản lý Users
+            </Button>
+          )}
 
           {/* Notifications */}
           <button className="text-gray-600 hover:text-black transition-colors relative p-2 hover:bg-gray-100 rounded-lg">
@@ -88,10 +100,10 @@ export default function Navbar({ onToggleSidebar }) {
             <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
           </button>
 
-          {/* Settings - Only for admin/manager */}
-          {(user?.role === 'admin' || user?.role === 'manager') && (
+          {/* Settings - Only for admin */}
+          {user?.role === 'admin' && (
             <button 
-              onClick={() => navigate('/settings')}
+              onClick={() => navigate('/admin/settings')}
               className="text-gray-600 hover:text-black transition-colors p-2 hover:bg-gray-100 rounded-lg"
             >
               <Settings className="w-5 h-5" />
