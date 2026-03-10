@@ -198,49 +198,6 @@ const useAdminStore = create(
           set((state) => {
             state.bulkSelectedUsers = state.pendingUsers.map((u) => u.id);
           }),
-
-        // Computed values (using selectors)
-        getFilteredUsers: () => {
-          const { pendingUsers, filters } = get();
-          let filtered = [...pendingUsers];
-
-          // Search filter
-          if (filters.search) {
-            filtered = filtered.filter(
-              (user) =>
-                user.name
-                  .toLowerCase()
-                  .includes(filters.search.toLowerCase()) ||
-                user.email
-                  .toLowerCase()
-                  .includes(filters.search.toLowerCase()) ||
-                user.department
-                  ?.toLowerCase()
-                  .includes(filters.search.toLowerCase()),
-            );
-          }
-
-          // Role filter
-          if (filters.role !== "all") {
-            filtered = filtered.filter(
-              (user) => user.requestedRole === filters.role,
-            );
-          }
-
-          // Sort
-          filtered.sort((a, b) => {
-            if (filters.sortBy === "newest") {
-              return new Date(b.submittedAt) - new Date(a.submittedAt);
-            } else if (filters.sortBy === "oldest") {
-              return new Date(a.submittedAt) - new Date(b.submittedAt);
-            } else if (filters.sortBy === "name") {
-              return a.name.localeCompare(b.name);
-            }
-            return 0;
-          });
-
-          return filtered;
-        },
       })),
       {
         name: "admin-store",

@@ -13,6 +13,7 @@ import IngestReviewPage from "./pages/Manager/IngestReviewPage";
 import { PendingApprovals } from "./pages/Admin";
 import { AdminProvider } from "./context/AdminContext";
 import { Toaster } from "sonner";
+import UserManagePage from "./pages/Admin/UserManagePage";
 
 function App() {
   return (
@@ -45,6 +46,14 @@ function App() {
               element={
                 <AdminProvider>
                   <PendingApprovals />
+                </AdminProvider>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <AdminProvider>
+                  <UserManagePage />
                 </AdminProvider>
               }
             />

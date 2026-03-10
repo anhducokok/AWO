@@ -1,23 +1,61 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useCallback } from "react";
 import useAdminStore from "@/stores/adminStore";
 
 export const usePendingApprovals = () => {
-  const store = useAdminStore();
+  // Use selectors to subscribe only to specific parts of the store
+  const pendingUsers = useAdminStore((state) => state.pendingUsers);
+  const isLoading = useAdminStore((state) => state.isLoading);
+  const error = useAdminStore((state) => state.error);
+  const filters = useAdminStore((state) => state.filters);
+  const selectedUser = useAdminStore((state) => state.selectedUser);
 
-  // Load data on mount
+  // Actions - these are stable references from Zustand
+  const loadPendingUsers = useAdminStore((state) => state.loadPendingUsers);
+  const approveUser = useAdminStore((state) => state.approveUser);
+  const rejectUser = useAdminStore((state) => state.rejectUser);
+  const updateFilter = useAdminStore((state) => state.updateFilter);
+  const setSelectedUser = useAdminStore((state) => state.setSelectedUser);
+  const clearSelections = useAdminStore((state) => state.clearSelections);
+  const resetFilters = useAdminStore((state) => state.resetFilters);
+
+  // Load data on mount - no dependency needed since loadPendingUsers is stable
   useEffect(() => {
-    store.loadPendingUsers();
-  }, [store.loadPendingUsers]);
+    loadPendingUsers();
+  }, [loadPendingUsers]);
 
-  // Computed filtered users
+  // Computed filtered users - now dependencies match what React Compiler expects
   const filteredUsers = useMemo(() => {
-    return store.getFilteredUsers();
-  }, [
-    store.pendingUsers,
-    store.filters.search,
-    store.filters.role,
-    store.filters.sortBy,
-  ]);
+    let filtered = [...pendingUsers];
+
+    // Search filter
+    if (filters.search) {
+      filtered = filtered.filter(
+        (user) =>
+          user.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+          user.email.toLowerCase().includes(filters.search.toLowerCase()) ||
+          user.department?.toLowerCase().includes(filters.search.toLowerCase()),
+      );
+    }
+
+    // Role filter
+    if (filters.role !== "all") {
+      filtered = filtered.filter((user) => user.requestedRole === filters.role);
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      if (filters.sortBy === "newest") {
+        return new Date(b.submittedAt) - new Date(a.submittedAt);
+      } else if (filters.sortBy === "oldest") {
+        return new Date(a.submittedAt) - new Date(b.submittedAt);
+      } else if (filters.sortBy === "name") {
+        return a.name.localeCompare(b.name);
+      }
+      return 0;
+    });
+
+    return filtered;
+  }, [pendingUsers, filters.search, filters.role, filters.sortBy]);
 
   // Computed stats from filtered data
   const computedStats = useMemo(() => {
@@ -33,36 +71,48 @@ export const usePendingApprovals = () => {
     };
   }, [filteredUsers]);
 
-  // Actions
-  const handleRefresh = () => {
-    store.loadPendingUsers();
-  };
+  // Stable action handlers
+  const handleRefresh = useCallback(() => {
+    loadPendingUsers();
+  }, [loadPendingUsers]);
 
-  const handleApprove = async (userId) => {
-    await store.approveUser(userId);
-  };
+  const handleApprove = useCallback(
+    async (userId) => {
+      await approveUser(userId);
+    },
+    [approveUser],
+  );
 
-  const handleReject = async (userId) => {
-    await store.rejectUser(userId);
-  };
+  const handleReject = useCallback(
+    async (userId) => {
+      await rejectUser(userId);
+    },
+    [rejectUser],
+  );
 
-  const handleFilterChange = (key, value) => {
-    store.updateFilter(key, value);
-  };
+  const handleFilterChange = useCallback(
+    (key, value) => {
+      updateFilter(key, value);
+    },
+    [updateFilter],
+  );
 
-  const handleViewDetails = (user) => {
-    store.setSelectedUser(user);
-  };
+  const handleViewDetails = useCallback(
+    (user) => {
+      setSelectedUser(user);
+    },
+    [setSelectedUser],
+  );
 
   return {
     // State
-    pendingUsers: store.pendingUsers,
+    pendingUsers,
     filteredUsers,
-    isLoading: store.isLoading,
-    error: store.error,
+    isLoading,
+    error,
     stats: computedStats,
-    filters: store.filters,
-    selectedUser: store.selectedUser,
+    filters,
+    selectedUser,
 
     // Actions
     handleRefresh,
@@ -70,9 +120,9 @@ export const usePendingApprovals = () => {
     handleReject,
     handleFilterChange,
     handleViewDetails,
-    setSelectedUser: store.setSelectedUser,
-    clearSelections: store.clearSelections,
-    resetFilters: store.resetFilters,
+    setSelectedUser,
+    clearSelections,
+    resetFilters,
   };
 };
 

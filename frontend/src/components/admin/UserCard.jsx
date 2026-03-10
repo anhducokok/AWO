@@ -6,6 +6,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { roleUtils, dateUtils, stringUtils } from "@/utils/adminUtils";
 
 const UserCard = ({ user, onViewDetails, onApprove, onReject }) => {
+  // Early return if user is null/undefined
+  if (!user) {
+    return null;
+  }
+    
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardContent className="p-6">
@@ -83,6 +88,7 @@ const UserCard = ({ user, onViewDetails, onApprove, onReject }) => {
       </CardContent>
     </Card>
   );
+
 };
 
 export default UserCard;
